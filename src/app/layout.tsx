@@ -67,10 +67,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <Script
-        async
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2342877955221604"
         crossOrigin="anonymous"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
       />
       <body className="min-h-screen bg-background font-sans antialiased">
         <a
