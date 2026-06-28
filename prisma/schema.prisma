@@ -1,0 +1,631 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PricingModel {
+  FREE
+  FREEMIUM
+  PAID
+  CONTACT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+  passwordHash  String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  reviews       Review[]
+  favorites     Favorite[]
+  bookmarks     Bookmark[]
+  history       History[]
+  collections    Collection[]
+  notifications  Notification[]
+  helpfulVotes   HelpfulVote[]
+  prompts        Prompt[]
+  promptRatings  PromptRating[]
+  promptFavorites PromptFavorite[]
+  workspaces     Workspace[]
+  stacks         Stack[]
+  stackLikes     StackLike[]
+  stackComments  StackComment[]
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  refreshToken      String?
+  accessToken       String?
+  expiresAt         Int?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model AiTool {
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  tagline       String
+  description   String
+  logo          String?
+  websiteUrl    String
+  pricing       PricingModel  @default(FREE)
+  pricingDetail String?
+  startingPrice Float?
+  isFeatured    Boolean       @default(false)
+  isPublished   Boolean       @default(false)
+  isOpenSource  Boolean       @default(false)
+  isEthical     Boolean       @default(false)
+  featuredScore Int           @default(0)
+  viewCount     Int           @default(0)
+  clickCount    Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  categories    ToolCategory[]
+  tags          ToolTag[]
+  pros          Pro[]
+  cons          Con[]
+  screenshots   Screenshot[]
+  reviews       Review[]
+  favorites     Favorite[]
+  bookmarks     Bookmark[]
+  history       History[]
+  faqs          Faq[]
+  alternatives  Alternative[]
+  alternativesFrom Alternative[] @relation("AlternativeTo")
+  collectionItems CollectionItem[]
+  freeDeals      FreeDeal[]
+  prompts        Prompt[]
+  workspaceItems WorkspaceItem[]
+  useCaseTools   UseCaseTool[]
+  stackItems     StackItem[]
+
+  @@index([isPublished, isFeatured])
+  @@index([slug])
+  @@index([pricing])
+  @@index([viewCount])
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  icon        String?
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+
+  tools       ToolCategory[]
+
+  @@index([slug])
+  @@index([order])
+}
+
+model ToolCategory {
+  toolId     String
+  categoryId String
+  tool       AiTool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([toolId, categoryId])
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+
+  tools     ToolTag[]
+}
+
+model ToolTag {
+  toolId String
+  tagId  String
+  tool   AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([toolId, tagId])
+}
+
+model Pro {
+  id     String @id @default(cuid())
+  text   String
+  toolId String
+  tool   AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+}
+
+model Con {
+  id     String @id @default(cuid())
+  text   String
+  toolId String
+  tool   AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+}
+
+model Screenshot {
+  id     String @id @default(cuid())
+  url    String
+  alt    String?
+  order  Int    @default(0)
+  toolId String
+  tool   AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  userId    String
+  toolId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+  @@index([toolId])
+  @@index([userId])
+  @@index([createdAt])
+
+  helpfulVotes HelpfulVote[]
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  createdAt DateTime @default(now())
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+  @@index([userId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  createdAt DateTime @default(now())
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
+  @@index([userId])
+}
+
+model History {
+  id        String   @id @default(cuid())
+  userId    String
+  toolId    String
+  createdAt DateTime @default(now())
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([toolId])
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  order     Int      @default(0)
+  toolId    String
+  tool      AiTool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+}
+
+model Alternative {
+  id           String @id @default(cuid())
+  toolId       String
+  alternativeId String
+  tool         AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  alternative  AiTool @relation("AlternativeTo", fields: [alternativeId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId, alternativeId])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model FreeDeal {
+  id          String   @id @default(cuid())
+  toolId      String?
+  toolName    String
+  toolSlug    String   @unique
+  description String
+  dealType    String   @default("free-tier")
+  promoCode   String?
+  promoUrl    String?
+  link        String
+  verified    Boolean  @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tool AiTool? @relation(fields: [toolId], references: [id])
+
+  @@index([verified, expiresAt])
+}
+
+enum DiscoveryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DiscoveredProject {
+  id              String           @id @default(cuid())
+  repoName        String
+  repoOwner       String
+  fullName        String           @unique
+  githubUrl       String
+  description     String?
+  stars           Int              @default(0)
+  forks           Int              @default(0)
+  watchers        Int              @default(0)
+  language        String?
+  topics          String?
+  license         String?
+  summary         String?
+  category        String?
+  logoUrl         String?
+  readmeScore     Int              @default(0)
+  lastPushAt      DateTime?
+  discoveredAt    DateTime         @default(now())
+  status          DiscoveryStatus  @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([status])
+  @@index([stars])
+  @@index([category])
+  @@index([discoveredAt])
+}
+
+model DiscoveryLog {
+  id            String   @id @default(cuid())
+  source        String   @default("github")
+  query         String
+  resultsFound  Int      @default(0)
+  newDiscovered Int      @default(0)
+  status        String   @default("success")
+  errorMessage  String?
+  durationMs    Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  excerpt     String?
+  content     String
+  coverImage  String?
+  author      String
+  published   Boolean    @default(false)
+  featured    Boolean    @default(false)
+  readTime    Int        @default(5)
+  tags        String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([published, featured])
+  @@index([createdAt])
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  userId      String
+  public      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  CollectionItem[]
+  workspaceItems WorkspaceItem[]
+
+  @@index([userId])
+  @@index([slug])
+}
+
+model CollectionItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  toolId       String
+  note         String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  tool       AiTool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, toolId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model HelpfulVote {
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  helpful   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+}
+
+model Prompt {
+  id          String   @id @default(cuid())
+  toolId      String
+  title       String
+  content     String
+  description String?
+  category    String?
+  difficulty  String   @default("beginner")
+  language    String   @default("en")
+  isOfficial  Boolean  @default(false)
+  userId      String?
+  avgRating   Float    @default(0)
+  ratingCount Int      @default(0)
+  useCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tool    AiTool        @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  user    User?         @relation(fields: [userId], references: [id])
+  ratings    PromptRating[]
+  favorites  PromptFavorite[]
+  workspaceItems WorkspaceItem[]
+
+  @@index([toolId])
+  @@index([userId])
+  @@index([category])
+  @@index([isOfficial])
+}
+
+model PromptRating {
+  id        String   @id @default(cuid())
+  promptId  String
+  userId    String
+  rating    Int
+  createdAt DateTime @default(now())
+
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([promptId, userId])
+  @@index([promptId])
+  @@index([userId])
+}
+
+model PromptFavorite {
+  id        String   @id @default(cuid())
+  promptId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([promptId, userId])
+  @@index([promptId])
+  @@index([userId])
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  emoji       String   @default("💼")
+  userId      String
+  isPublic    Boolean  @default(false)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WorkspaceItem[]
+
+  @@index([userId])
+}
+
+model WorkspaceItem {
+  id          String  @id @default(cuid())
+  workspaceId String
+  toolId      String?
+  note        String?
+  promptId    String?
+  collectionId String?
+  workflow    String?
+  order       Int     @default(0)
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tool       AiTool?     @relation(fields: [toolId], references: [id])
+  prompt     Prompt?     @relation(fields: [promptId], references: [id])
+  collection Collection? @relation(fields: [collectionId], references: [id])
+
+  @@index([workspaceId])
+}
+
+model UseCase {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  description    String?
+  icon           String?
+  difficulty     String   @default("beginner")
+  estimatedTime  String?
+  category       String?
+  steps          Json?
+  createdAt      DateTime @default(now())
+
+  tools UseCaseTool[]
+
+  @@index([slug])
+}
+
+model UseCaseTool {
+  id        String @id @default(cuid())
+  useCaseId String
+  toolId    String
+  order     Int    @default(0)
+
+  useCase UseCase @relation(fields: [useCaseId], references: [id], onDelete: Cascade)
+  tool    AiTool  @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([useCaseId, toolId])
+  @@index([useCaseId])
+  @@index([toolId])
+}
+
+model Stack {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  emoji       String   @default("🔧")
+  userId      String
+  isPublic    Boolean  @default(true)
+  likeCount   Int      @default(0)
+  cloneCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items    StackItem[]
+  likes    StackLike[]
+  comments StackComment[]
+
+  @@index([userId])
+  @@index([isPublic, likeCount])
+}
+
+model StackItem {
+  id      String @id @default(cuid())
+  stackId String
+  toolId  String
+  order   Int    @default(0)
+
+  stack Stack  @relation(fields: [stackId], references: [id], onDelete: Cascade)
+  tool  AiTool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([stackId, toolId])
+  @@index([stackId])
+  @@index([toolId])
+}
+
+model StackLike {
+  id      String   @id @default(cuid())
+  stackId String
+  userId  String
+  createdAt DateTime @default(now())
+
+  stack Stack @relation(fields: [stackId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([stackId, userId])
+  @@index([stackId])
+  @@index([userId])
+}
+
+model StackComment {
+  id        String   @id @default(cuid())
+  stackId   String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  stack Stack @relation(fields: [stackId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stackId])
+}
+
+model LearningPath {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  icon        String?
+  difficulty  String   @default("beginner")
+  category    String?
+  steps       Json?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([published])
+}
+

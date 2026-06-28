@@ -1,0 +1,8 @@
+import { defineConfig } from "@prisma/config"
+
+export default defineConfig({
+  datasource: {
+    url: process.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/aiverse",
+  },
+  schema: "prisma/schema.prisma",
+})
