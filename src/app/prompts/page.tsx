@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Filter, FileText, BookOpen, RefreshCw } from "lucide-react"
+import { Search, Filter, FileText, BookOpen, RefreshCw, Sparkles, Wand2, X, Copy, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent } from "@/components/ui/card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { PromptCard } from "@/components/prompts/prompt-card"
 import { useToast } from "@/components/toast"
+import { cn } from "@/lib/utils"
 
 interface Prompt {
   id: string
@@ -40,6 +42,14 @@ export default function PromptsPage() {
   const [category, setCategory] = useState<string | null>(null)
   const [difficulty, setDifficulty] = useState<string | null>(null)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  const [showGenerator, setShowGenerator] = useState(false)
+  const [genDescription, setGenDescription] = useState("")
+  const [genCategory, setGenCategory] = useState("")
+  const [genDifficulty, setGenDifficulty] = useState("")
+  const [genTool, setGenTool] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [generated, setGenerated] = useState<{ content: string; suggestedTitle: string } | null>(null)
+  const [copied, setCopied] = useState(false)
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -84,11 +94,17 @@ export default function PromptsPage() {
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Prompt Library</h1>
-          <p className="mt-2 text-muted-foreground">
-            Browse and discover prompts for your AI tools
-          </p>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Prompt Library</h1>
+            <p className="mt-2 text-muted-foreground">
+              Browse curated prompts or generate custom ones with AI
+            </p>
+          </div>
+          <Button onClick={() => { setShowGenerator(true); setGenerated(null); setGenDescription("") }} className="shrink-0 gap-2">
+            <Sparkles className="h-4 w-4" />
+            Generate Prompt
+          </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -141,6 +157,161 @@ export default function PromptsPage() {
             </button>
           ))}
         </div>
+
+        {/* AI Prompt Generator */}
+        {showGenerator && (
+          <Card className="mb-8 border-primary/20 bg-primary/[0.03]">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-5 w-5 text-primary" />
+                  <h2 className="font-semibold">AI Prompt Generator</h2>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setShowGenerator(false)} aria-label="Close">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {!generated ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Describe what kind of prompt you need</label>
+                    <textarea
+                      value={genDescription}
+                      onChange={(e) => setGenDescription(e.target.value)}
+                      placeholder="e.g., A prompt for generating professional product photography with Midjourney, or a coding prompt for React component generation..."
+                      className="w-full min-h-[100px] rounded-lg border border-input bg-background px-3 py-2 text-sm resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Category (optional)</label>
+                      <select value={genCategory} onChange={(e) => setGenCategory(e.target.value)} className="w-full h-9 rounded-lg border border-input bg-background px-2 text-sm">
+                        <option value="">Any category</option>
+                        <option value="writing">Writing</option>
+                        <option value="coding">Coding</option>
+                        <option value="creative">Creative</option>
+                        <option value="business">Business</option>
+                        <option value="analysis">Analysis</option>
+                        <option value="education">Education</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Difficulty</label>
+                      <select value={genDifficulty} onChange={(e) => setGenDifficulty(e.target.value)} className="w-full h-9 rounded-lg border border-input bg-background px-2 text-sm">
+                        <option value="">Any difficulty</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">For AI tool (optional)</label>
+                      <select value={genTool} onChange={(e) => setGenTool(e.target.value)} className="w-full h-9 rounded-lg border border-input bg-background px-2 text-sm">
+                        <option value="">Any tool</option>
+                        {[...new Set(prompts.map((p) => p.tool.slug))].map((slug) => {
+                          const t = prompts.find((p) => p.tool.slug === slug)?.tool
+                          return t ? <option key={slug} value={slug}>{t.name}</option> : null
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      if (!genDescription.trim()) return
+                      setGenerating(true)
+                      try {
+                        const res = await fetch("/api/prompts/generate", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            description: genDescription,
+                            toolSlug: genTool || undefined,
+                            category: genCategory || undefined,
+                            difficulty: genDifficulty || undefined,
+                          }),
+                        })
+                        const data = await res.json()
+                        if (data?.data) {
+                          setGenerated(data.data)
+                        } else {
+                          showToast(data.error || "Failed to generate", "error")
+                        }
+                      } catch {
+                        showToast("Failed to generate prompt", "error")
+                      }
+                      setGenerating(false)
+                    }}
+                    disabled={!genDescription.trim() || generating}
+                    className="gap-2"
+                  >
+                    {generating ? (
+                      <><RefreshCw className="h-4 w-4 animate-spin" /> Generating...</>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Generate Prompt</>
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">Generated Prompt</p>
+                      <p className="text-lg font-semibold mt-1">{generated.suggestedTitle}</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        variant="outline" size="sm" className="gap-1.5"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch("/api/prompts", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                title: generated.suggestedTitle,
+                                content: generated.content,
+                                description: genDescription.slice(0, 200),
+                                category: genCategory || undefined,
+                                difficulty: genDifficulty || "beginner",
+                                toolSlug: genTool || undefined,
+                              }),
+                            })
+                            if (res.ok) {
+                              showToast("Prompt saved to library", "success")
+                              setShowGenerator(false)
+                              // Refresh prompts list
+                              const params = new URLSearchParams()
+                              if (search) params.set("search", search)
+                              const refresh = await fetch(`/api/prompts?${params.toString()}`)
+                              if (refresh.ok) setPrompts((await refresh.json()).items)
+                            } else {
+                              showToast("Failed to save", "error")
+                            }
+                          } catch {
+                            showToast("Failed to save prompt", "error")
+                          }
+                        }}
+                      >
+                        <FileText className="h-4 w-4" /> Save
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { navigator.clipboard.writeText(generated.content); setCopied(true); setTimeout(() => setCopied(false), 2000) }}>
+                        {copied ? <><Check className="h-4 w-4" /> Copied</> : <><Copy className="h-4 w-4" /> Copy</>}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="relative rounded-lg border bg-secondary/30 p-4">
+                    <pre className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                      {generated.content}
+                    </pre>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setGenerated(null)} className="gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5" /> Generate another
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
