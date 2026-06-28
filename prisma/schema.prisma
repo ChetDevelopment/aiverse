@@ -427,21 +427,23 @@ model HelpfulVote {
 }
 
 model Prompt {
-  id          String   @id @default(cuid())
-  toolId      String
-  title       String
-  content     String
-  description String?
-  category    String?
-  difficulty  String   @default("beginner")
-  language    String   @default("en")
-  isOfficial  Boolean  @default(false)
-  userId      String?
-  avgRating   Float    @default(0)
-  ratingCount Int      @default(0)
-  useCount    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  toolId        String
+  title         String
+  content       String
+  description   String?
+  category      String?
+  difficulty    String   @default("beginner")
+  language      String   @default("en")
+  isOfficial    Boolean  @default(false)
+  previewImage  String?
+  resultExample String?
+  userId        String?
+  avgRating     Float    @default(0)
+  ratingCount   Int      @default(0)
+  useCount      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   tool    AiTool        @relation(fields: [toolId], references: [id], onDelete: Cascade)
   user    User?         @relation(fields: [userId], references: [id])

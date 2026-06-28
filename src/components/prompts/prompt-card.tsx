@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Copy, Heart, Star, Sparkles } from "lucide-react"
+import Image from "next/image"
+import { Copy, Heart, Star, Sparkles, ImageIcon, Code2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,8 @@ interface PromptCardPrompt {
   category: string | null
   difficulty: string
   isOfficial: boolean
+  previewImage?: string | null
+  resultExample?: string | null
   avgRating: number
   ratingCount: number
   useCount: number
@@ -103,6 +106,23 @@ export function PromptCard({ prompt, isFavorited, onFavoriteToggle }: PromptCard
             <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-1">
               {prompt.description}
             </p>
+          )}
+
+          {prompt.previewImage && prompt.category === "image" && (
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-3 bg-secondary">
+              <Image src={prompt.previewImage} alt="" fill className="object-cover" unoptimized sizes="(max-width: 768px) 100vw, 400px" />
+            </div>
+          )}
+
+          {prompt.resultExample && (
+            <div className="flex items-start gap-2 mb-3 p-2.5 rounded-lg bg-secondary/50 border text-xs text-muted-foreground">
+              {prompt.category === "image" ? (
+                <ImageIcon className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+              ) : (
+                <Code2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+              )}
+              <span className="italic">{prompt.resultExample}</span>
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
