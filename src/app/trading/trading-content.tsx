@@ -54,6 +54,7 @@ function formatVolume(vol: number): string {
 
 interface MarketOverview {
   assets: Asset[]
+  allAssets?: Asset[]
   fearGreed: number
   sentiment: number
   marketCap: string
@@ -62,8 +63,17 @@ interface MarketOverview {
   openInterest: string
   topGainers: { name: string; change: string }[]
   topLosers: { name: string; change: string }[]
+  trendingCoins?: { name: string; symbol: string }[]
   news: { title: string; source: string; time: string; sentiment: string }[]
-  communityPosts: { user: string; text: string; likes: number; sentiment: string }[]
+  communityPosts?: { user: string; text: string; likes: number; sentiment: string }[]
+  marketOverview?: {
+    totalMarketCap: string
+    totalVolume: string
+    btcDominance: string
+    ethDominance: string
+    activeCryptocurrencies: number
+    markets: number
+  }
 }
 
 export default function TradingPage() {
