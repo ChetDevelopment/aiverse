@@ -37,8 +37,12 @@ function initPrisma(): PrismaClient {
       const client = new PrismaClient({ adapter })
       globalForPrisma.prisma = client
       return client
-    } catch (e) {
-      console.warn("Prisma adapter failed:", (e as Error)?.message)
+    } catch {
+      try {
+        const client = new PrismaClient({ datasourceUrl: url })
+        globalForPrisma.prisma = client
+        return client
+      } catch {}
     }
   }
 
