@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr"
 
 const LOCAL_AUTH_COOKIE = "aiverse_local_session"
 const GOOGLE_AUTH_COOKIE = "aiverse_google_session"
+const GITHUB_AUTH_COOKIE = "aiverse_github_session"
 
 // In-memory rate limit map (edge-compatible)
 const rateMap = new Map<string, { count: number; resetAt: number }>()
@@ -93,6 +94,15 @@ export async function middleware(request: NextRequest) {
       if (googleCookie?.value) {
         try {
           const data = JSON.parse(Buffer.from(googleCookie.value, "base64").toString())
+          isLocalAdmin = data.role === "ADMIN"
+        } catch {}
+      }
+    }
+    if (!isLocalAdmin) {
+      const githubCookie = request.cookies.get(GITHUB_AUTH_COOKIE)
+      if (githubCookie?.value) {
+        try {
+          const data = JSON.parse(Buffer.from(githubCookie.value, "base64").toString())
           isLocalAdmin = data.role === "ADMIN"
         } catch {}
       }

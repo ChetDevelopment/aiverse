@@ -54,9 +54,9 @@ function LoginContent() {
     window.location.href = "/api/auth/google"
   }
 
-  async function handleGithubLogin() {
+  function handleGithubLogin() {
     setOauthLoading("github")
-    window.location.href = "/api/auth/google"
+    window.location.href = "/api/auth/github"
   }
 
   return (
