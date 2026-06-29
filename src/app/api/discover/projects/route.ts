@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { apiSuccess } from "@/lib/api-utils"
 import { Prisma } from "@prisma/client"
 
+export const maxDuration = 30
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get("page") || "1")
