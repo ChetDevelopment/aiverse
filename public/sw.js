@@ -1,9 +1,7 @@
 const CACHE = "aiverse-v1"
 const STATIC_ASSETS = [
   "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/favicon-32.png",
+  "/image.png",
   "/apple-icon.png",
 ]
 
