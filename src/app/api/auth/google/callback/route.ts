@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { exchangeGoogleCode, getGoogleUser } from "@/lib/google-auth"
 import { prisma } from "@/lib/prisma"
 
-const ADMIN_EMAILS = ["vichet.sat@student.passerellesnumeriques.org", "ka383768@gmail.com", "admin@aiverse.ai", "admin@aiverse.com"]
+const ADMIN_EMAILS = ["vichet.sat@student.passerellesnumeriques.org"]
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
