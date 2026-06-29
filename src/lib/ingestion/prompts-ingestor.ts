@@ -1,24 +1,8 @@
 import { prisma } from "@/lib/prisma"
-import { slugify, createIngestionLog, completeIngestionLog, IngestionResult } from "./engine"
-import { logger } from "@/lib/logger"
+import { createIngestionLog, completeIngestionLog, IngestionResult } from "./engine"
 
-const PROMPT_SOURCES = [
-  {
-    owner: "f/awesome-chatgpt-prompts",
-    type: "github",
-    file: "prompts.csv",
-  },
-  {
-    owner: "fka/awesome-chatgpt-code-prompts",
-    type: "github",
-    file: "README.md",
-  },
-  {
-    owner: "williamberg/awesome-chatgpt-prompts",
-    type: "github",
-    file: "README.md",
-  },
-]
+const MIN_STARS_FOR_AUTO_APPROVE = 100
+const QUALITY_THRESHOLD = 30
 
 export async function ingestPublicPrompts(): Promise<IngestionResult> {
   const start = Date.now()
@@ -26,45 +10,76 @@ export async function ingestPublicPrompts(): Promise<IngestionResult> {
   const errors: string[] = []
   let created = 0, updated = 0, skipped = 0, failed = 0
 
-  for (const source of PROMPT_SOURCES) {
-    try {
-      if (source.type === "github") {
-        const prompts = await fetchGitHubPrompts(source.owner)
-        for (const prompt of prompts) {
-          const existing = await prisma.discoveredPrompt.findFirst({
-            where: { title: prompt.title, sourceUrl: prompt.sourceUrl },
-          })
-          if (existing) {
-            skipped++
-            continue
-          }
-          const tool = prompt.toolSlug
-            ? await prisma.aiTool.findFirst({ where: { slug: prompt.toolSlug } })
-            : null
+  // Auto-discover prompt repos from GitHub
+  const repos = await discoverPromptRepos()
 
-          await prisma.discoveredPrompt.create({
-            data: {
-              source: "github",
-              sourceUrl: prompt.sourceUrl,
-              title: prompt.title,
-              content: prompt.content,
-              description: prompt.description,
-              category: prompt.category,
-              difficulty: prompt.difficulty,
-              toolName: prompt.toolName || tool?.name || null,
-              toolSlug: prompt.toolSlug || tool?.slug || null,
-              qualityScore: prompt.qualityScore || 50,
-              status: "pending",
-            },
-          })
-          created++
-        }
+  for (const repo of repos) {
+    try {
+      const prompts = await fetchPromptsFromRepo(repo.fullName, repo.htmlUrl)
+      for (const prompt of prompts) {
+        if (prompt.content.length < 20) { skipped++; continue }
+
+        const existing = await prisma.discoveredPrompt.findFirst({
+          where: { title: prompt.title, sourceUrl: prompt.sourceUrl },
+        })
+        if (existing) { skipped++; continue }
+
+        const autoApprove = prompt.qualityScore >= QUALITY_THRESHOLD
+        await prisma.discoveredPrompt.create({
+          data: {
+            source: "github",
+            sourceUrl: prompt.sourceUrl,
+            title: prompt.title.slice(0, 80),
+            content: prompt.content.slice(0, 2000),
+            description: prompt.description.slice(0, 200),
+            category: prompt.category,
+            difficulty: prompt.difficulty,
+            qualityScore: prompt.qualityScore,
+            status: autoApprove ? "approved" : "pending",
+          },
+        })
+        created++
       }
     } catch (e: any) {
-      errors.push(`Source "${source.owner}": ${e.message}`)
+      errors.push(repo.fullName)
       failed++
     }
   }
+
+  // Auto-import approved prompts into the main Prompt table
+  try {
+    const approved = await prisma.discoveredPrompt.findMany({
+      where: { status: "approved" },
+      take: 30,
+    })
+    for (const dp of approved) {
+      const slug = dp.title.toLowerCase().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-").slice(0, 80)
+      const existing = await prisma.prompt.findFirst({ where: { title: dp.title } })
+      if (existing) {
+        await prisma.discoveredPrompt.update({ where: { id: dp.id }, data: { status: "imported" } })
+        continue
+      }
+      const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } })
+      await prisma.prompt.create({
+        data: {
+          toolId: (await prisma.aiTool.findFirst({ where: { slug: dp.toolSlug || undefined } }))?.id
+            || (await prisma.aiTool.findFirst())?.id
+            || (await prisma.aiTool.create({
+              data: { name: dp.toolName || "General", slug: slug || "general", tagline: "", description: "", websiteUrl: "https://example.com", isPublished: true },
+            })).id,
+          title: dp.title.slice(0, 80),
+          content: dp.content,
+          description: dp.description,
+          category: dp.category,
+          difficulty: dp.difficulty,
+          isOfficial: false,
+          userId: admin?.id || undefined,
+        },
+      })
+      await prisma.discoveredPrompt.update({ where: { id: dp.id }, data: { status: "imported" } })
+      created++
+    }
+  } catch {}
 
   const result: IngestionResult = {
     sourceType: "prompts",
@@ -75,128 +90,113 @@ export async function ingestPublicPrompts(): Promise<IngestionResult> {
     itemsFailed: failed,
     errors,
     duration: Date.now() - start,
-    status: errors.length > 2 ? "failed" : "completed",
+    status: errors.length > repos.length / 2 ? "failed" : "completed",
   }
-
   await completeIngestionLog(log.id, result)
   return result
 }
 
-interface ParsedPrompt {
-  title: string
-  content: string
-  description: string
-  category: string
-  difficulty: string
-  toolSlug?: string
-  toolName?: string
-  qualityScore: number
-  sourceUrl: string
+async function discoverPromptRepos() {
+  const repos: { fullName: string; htmlUrl: string }[] = []
+  const queries = ["awesome+prompt", "awesome+chatgpt", "prompt-collection", "awesome-gpt", "prompt-engineering"]
+
+  for (const query of queries) {
+    try {
+      const res = await fetch(
+        `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=5`,
+        { headers: { Accept: "application/vnd.github.v3+json", "User-Agent": "AIVerse/1.0" } }
+      )
+      if (!res.ok) continue
+      const data = await res.json()
+      if (data.items) {
+        for (const item of data.items) {
+          repos.push({ fullName: item.full_name, htmlUrl: item.html_url })
+        }
+      }
+    } catch {}
+  }
+  return repos.slice(0, 15)
 }
 
-async function fetchGitHubPrompts(repo: string): Promise<ParsedPrompt[]> {
-  const [owner, repoName] = repo.split("/")
-  const results: ParsedPrompt[] = []
+async function fetchPromptsFromRepo(repo: string, repoUrl: string) {
+  const prompts: any[] = []
 
-  // Try README.md first
+  // Try README
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repoName}/readme`,
-      { headers: { Accept: "application/vnd.github.v3.raw", "User-Agent": "AIVerse/1.0" } }
-    )
+    const res = await fetch(`https://api.github.com/repos/${repo}/readme`, {
+      headers: { Accept: "application/vnd.github.v3.raw", "User-Agent": "AIVerse/1.0" },
+    })
     if (res.ok) {
       const text = await res.text()
-      const prompts = parseReadmePrompts(text, `https://github.com/${owner}/${repoName}`)
-      results.push(...prompts)
+      prompts.push(...parseReadmePrompts(text, repoUrl))
     }
   } catch {}
 
-  // Try prompts.csv
+  // Try prompts.csv / prompts.txt
   try {
-    const res = await fetch(
-      `https://raw.githubusercontent.com/${owner}/${repoName}/main/prompts.csv`,
-      { headers: { "User-Agent": "AIVerse/1.0" } }
-    )
+    const res = await fetch(`https://raw.githubusercontent.com/${repo}/main/prompts.csv`, {
+      headers: { "User-Agent": "AIVerse/1.0" },
+    })
     if (res.ok) {
       const text = await res.text()
-      const prompts = parseCSVPrompts(text, `https://github.com/${owner}/${repoName}`)
-      results.push(...prompts)
+      prompts.push(...parseCsvPrompts(text, repoUrl))
     }
   } catch {}
 
-  return results
+  return prompts
 }
 
-function parseReadmePrompts(markdown: string, sourceUrl: string): ParsedPrompt[] {
-  const prompts: ParsedPrompt[] = []
+function parseReadmePrompts(markdown: string, sourceUrl: string) {
+  const prompts: any[] = []
   const lines = markdown.split("\n")
-  let currentTitle = ""
-  let currentContent = ""
-  let inCode = false
+  let title = "", content = "", inCode = false
 
   for (const line of lines) {
     if (line.startsWith("```")) { inCode = !inCode; continue }
-    if (inCode) { currentContent += (currentContent ? "\n" : "") + line; continue }
+    if (inCode) { content += (content ? "\n" : "") + line; continue }
     if (line.startsWith("## ") || line.startsWith("### ")) {
-      if (currentTitle && currentContent.length > 20) {
-        prompts.push({
-          title: currentTitle,
-          content: currentContent.slice(0, 2000),
-          description: currentContent.slice(0, 150),
-          category: classifyPrompt(currentTitle, currentContent),
-          difficulty: "intermediate",
-          qualityScore: Math.min(currentContent.length / 2, 90),
-          sourceUrl,
-        })
+      if (title && content.length > 20) {
+        prompts.push(makePrompt(title, content, sourceUrl))
       }
-      currentTitle = line.replace(/^#+\s*/, "")
-      currentContent = ""
+      title = line.replace(/^#+\s*/, "").slice(0, 80)
+      content = ""
     }
   }
-  if (currentTitle && currentContent.length > 20) {
-    prompts.push({
-      title: currentTitle,
-      content: currentContent.slice(0, 2000),
-      description: currentContent.slice(0, 150),
-      category: classifyPrompt(currentTitle, currentContent),
-      difficulty: "intermediate",
-      qualityScore: Math.min(currentContent.length / 2, 90),
-      sourceUrl,
-    })
-  }
-
+  if (title && content.length > 20) prompts.push(makePrompt(title, content, sourceUrl))
   return prompts
 }
 
-function parseCSVPrompts(csv: string, sourceUrl: string): ParsedPrompt[] {
-  const prompts: ParsedPrompt[] = []
+function parseCsvPrompts(csv: string, sourceUrl: string) {
+  const prompts: any[] = []
   const lines = csv.split("\n")
-  for (let i = 1; i < Math.min(lines.length, 200); i++) {
+  for (let i = 1; i < Math.min(lines.length, 300); i++) {
     const parts = lines[i].split(",")
     if (parts.length < 2) continue
-    const title = parts[0]?.trim()?.replace(/^"|"$/g, "") || ""
-    const content = parts.slice(1).join(",").trim().replace(/^"|"$/g, "") || ""
+    const title = (parts[0] || "").trim().replace(/^"|"$/g, "").slice(0, 80)
+    const content = parts.slice(1).join(",").trim().replace(/^"|"$/g, "")
     if (!title || !content || content.length < 20) continue
-    prompts.push({
-      title: title.slice(0, 80),
-      content: content.slice(0, 2000),
-      description: content.slice(0, 150),
-      category: classifyPrompt(title, content),
-      difficulty: "intermediate",
-      qualityScore: Math.min(content.length, 85),
-      sourceUrl,
-    })
+    prompts.push(makePrompt(title, content, sourceUrl))
   }
   return prompts
 }
 
-function classifyPrompt(title: string, content: string): string {
+function makePrompt(title: string, content: string, sourceUrl: string) {
   const text = `${title} ${content}`.toLowerCase()
-  if (text.match(/code|program|function|debug|react|python|javascript|typescript|api|sql/)) return "coding"
-  if (text.match(/image|generate|create|art|design|photo|illustration|dalle|midjourney/)) return "creative"
-  if (text.match(/write|blog|article|essay|copy|content|email|newsletter/)) return "writing"
-  if (text.match(/business|marketing|sales|seo|ad|campaign|strategy/)) return "business"
-  if (text.match(/analyze|analysis|report|data|research|summarize/)) return "analysis"
-  if (text.match(/learn|study|teach|explain|tutor|education/)) return "education"
-  return "writing"
+  const category = text.match(/code|program|function|debug|react|python|javascript|typescript/) ? "coding"
+    : text.match(/image|generate|create|art|design|photo|illustration/) ? "creative"
+    : text.match(/write|blog|article|essay|copy|content|email|newsletter/) ? "writing"
+    : text.match(/business|marketing|sales|seo|ad|campaign/) ? "business"
+    : text.match(/analyze|analysis|report|data|research|summarize/) ? "analysis"
+    : text.match(/learn|study|teach|explain|tutor|education/) ? "education"
+    : "writing"
+
+  return {
+    title: title.slice(0, 80),
+    content: content.slice(0, 2000),
+    description: content.slice(0, 150),
+    category,
+    difficulty: content.length > 300 ? "intermediate" : "beginner",
+    qualityScore: Math.min(Math.round(content.length / 3 + (title.length > 20 ? 15 : 0)), 90),
+    sourceUrl,
+  }
 }
