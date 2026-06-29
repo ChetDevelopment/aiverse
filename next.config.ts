@@ -7,7 +7,7 @@ const CSP = [
   `img-src 'self' blob: data: https: https://pagead2.googlesyndication.com https://tpc.googlesyndication.com`,
   `font-src 'self' https:`,
   `connect-src 'self' https: http://localhost:* ws://localhost:* https://pagead2.googlesyndication.com`,
-  `frame-src 'self' https://*.supabase.co https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net`,
+  `frame-src 'self' https://*.supabase.co https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com`,
   `object-src 'none'`,
   `base-uri 'self'`,
   `form-action 'self'`,

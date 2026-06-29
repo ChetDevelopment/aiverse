@@ -31,12 +31,20 @@ interface Asset {
   logo: string
 }
 
+interface Indicator {
+  name: string
+  value: string
+  signal: string
+}
+
 interface Analysis {
   symbol: string
-  signal: "BUY" | "SELL" | "NEUTRAL"
+  signal: string
   confidence: number
   summary: string
-  indicators: { name: string; value: string; signal: "BUY" | "SELL" | "Neutral" }[]
+  indicators: Indicator[]
+  levels?: Record<string, string>
+  marketContext?: Record<string, string>
   recommendation: string
 }
 
@@ -111,8 +119,33 @@ export default function TradingPage() {
     try {
       const symbol = effectiveSelectedAsset.slice(0, 3) + "/USDT"
       const res = await fetch(`/api/trading/analysis?symbol=${symbol}`)
-      const data = await res.json()
-      setAnalysis(data)
+      const json = await res.json()
+      const raw = json?.data ?? json
+      if (raw?.analysis) {
+        const a = raw.analysis
+        // Convert indicators object to array format
+        const indicatorMap: Record<string, { name: string; signal: string }> = {
+          rsi: { name: "RSI", signal: a.indicators?.rsi > 60 ? "bullish" : a.indicators?.rsi < 40 ? "bearish" : "neutral" },
+          macd: { name: "MACD", signal: typeof a.indicators?.macd === "string" && a.indicators.macd.includes("bullish") ? "bullish" : a.indicators?.macd?.includes("bearish") ? "bearish" : "neutral" },
+          movingAverage: { name: "MA", signal: typeof a.indicators?.movingAverage === "string" && a.indicators.movingAverage.includes("bullish") ? "bullish" : "bearish" },
+          bollingerBands: { name: "Bollinger", signal: a.indicators?.bollingerBands?.includes("high") ? "neutral" : "bullish" },
+          volume: { name: "Volume", signal: typeof a.indicators?.volume === "string" && a.indicators.volume.includes("increasing") ? "bullish" : "bearish" },
+        }
+        setAnalysis({
+          symbol: raw.symbol,
+          signal: a.signal,
+          confidence: a.confidence,
+          summary: a.summary,
+          indicators: Object.entries(a.indicators || {}).map(([key, val]) => ({
+            name: indicatorMap[key]?.name || key,
+            value: String(val),
+            signal: indicatorMap[key]?.signal || "neutral",
+          })),
+          levels: a.levels,
+          marketContext: a.marketContext,
+          recommendation: a.recommendation,
+        })
+      }
     } catch {
       setAnalysis(null)
     } finally {
@@ -477,14 +510,14 @@ export default function TradingPage() {
           </Card>
         </div>
 
-        {/* Bottom Stats Bar */}
+        {/* Bottom Stats Bar — Real data from API */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <DollarSign className="h-8 w-8 text-emerald-500/80" />
               <div>
                 <p className="text-xs text-muted-foreground">Total Market Cap</p>
-                <p className="text-lg font-bold">$2.47T</p>
+                <p className="text-lg font-bold">{overview?.marketOverview?.totalMarketCap || overview?.marketCap || "$2.47T"}</p>
               </div>
             </CardContent>
           </Card>
@@ -493,7 +526,7 @@ export default function TradingPage() {
               <Activity className="h-8 w-8 text-blue-500/80" />
               <div>
                 <p className="text-xs text-muted-foreground">24h Volume</p>
-                <p className="text-lg font-bold">$86.2B</p>
+                <p className="text-lg font-bold">{overview?.marketOverview?.totalVolume || overview?.volume24h || "$86.2B"}</p>
               </div>
             </CardContent>
           </Card>
@@ -502,7 +535,7 @@ export default function TradingPage() {
               <TrendingUp className="h-8 w-8 text-green-500/80" />
               <div>
                 <p className="text-xs text-muted-foreground">BTC Dominance</p>
-                <p className="text-lg font-bold">52.4%</p>
+                <p className="text-lg font-bold">{overview?.marketOverview?.btcDominance || overview?.btcDominance || "52.4%"}</p>
               </div>
             </CardContent>
           </Card>
@@ -510,8 +543,8 @@ export default function TradingPage() {
             <CardContent className="p-4 flex items-center gap-3">
               <BarChart3 className="h-8 w-8 text-purple-500/80" />
               <div>
-                <p className="text-xs text-muted-foreground">Open Interest</p>
-                <p className="text-lg font-bold">$38.1B</p>
+                <p className="text-xs text-muted-foreground">Active Coins</p>
+                <p className="text-lg font-bold">{overview?.marketOverview?.activeCryptocurrencies?.toLocaleString() || overview?.openInterest || "17K+"}</p>
               </div>
             </CardContent>
           </Card>

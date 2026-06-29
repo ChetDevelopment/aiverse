@@ -2,54 +2,39 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import * as LightweightCharts from "lightweight-charts"
-import type { IChartApi, ISeriesApi, CandlestickData, Time } from "lightweight-charts"
-const { createChart, ColorType } = LightweightCharts
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { IChartApi, ISeriesApi, Time } from "lightweight-charts"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CandlestickChart, AlertCircle, RefreshCw } from "lucide-react"
 
-const COIN_MAP: Record<string, { id: string; price: number }> = {
-  BTCUSD: { id: "bitcoin", price: 67450 },
-  BTCUSDT: { id: "bitcoin", price: 67450 },
-  ETHUSD: { id: "ethereum", price: 3520 },
-  ETHUSDT: { id: "ethereum", price: 3520 },
-  SOLUSD: { id: "solana", price: 168 },
-  SOLUSDT: { id: "solana", price: 168 },
-  BNBUSD: { id: "binancecoin", price: 598 },
-  BNBUSDT: { id: "binancecoin", price: 598 },
-  XRPUSD: { id: "ripple", price: 0.62 },
-  XRPUSDT: { id: "ripple", price: 0.62 },
-  DOGEUSD: { id: "dogecoin", price: 0.124 },
-  DOGEUSDT: { id: "dogecoin", price: 0.124 },
-  ADAUSD: { id: "cardano", price: 0.46 },
-  ADAUSDT: { id: "cardano", price: 0.46 },
-}
-
-function generateMockOHLC(basePrice: number, days: number): CandlestickData[] {
-  const data: CandlestickData[] = []
-  const now = Math.floor(Date.now() / 1000)
-  const interval = days <= 7 ? 3600 : 86400
-  const count = days <= 7 ? days * 24 : days
-  let price = basePrice
-  for (let i = count; i >= 0; i--) {
-    const time = ((now - i * interval) / interval) * interval
-    const change = (Math.random() - 0.48) * price * 0.04
-    const open = price
-    const close = price + change
-    const high = Math.max(open, close) * (1 + Math.random() * 0.02)
-    const low = Math.min(open, close) * (1 - Math.random() * 0.02)
-    data.push({ time: time as Time, open, high, low, close })
-    price = close
-  }
-  return data
-}
-
-const PERIODS = [
-  { label: "7D", days: 7 },
-  { label: "30D", days: 30 },
-  { label: "90D", days: 90 },
+const TIMEFRAMES = [
+  { label: "5m", days: "5m" },
+  { label: "15m", days: "15m" },
+  { label: "1H", days: "1H" },
+  { label: "4H", days: "4H" },
+  { label: "1D", days: "1D" },
+  { label: "1W", days: "1W" },
+  { label: "1M", days: "1M" },
 ] as const
+
+interface Candle {
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+}
+
+interface IndicatorData {
+  rsi: number
+  sma20: number
+  sma50: number
+  bollinger: { upper: number; middle: number; lower: number; width: string }
+  atr: number
+  macd: { value: number; signal: number; histogram: number; direction: string }
+  volumeProfile: { average: number; trend: string }
+}
 
 interface TradingChartProps {
   symbol?: string
@@ -61,38 +46,55 @@ export function TradingChart({ symbol = "BTCUSD" }: TradingChartProps) {
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [period, setPeriod] = useState(30)
+  const [timeframe, setTimeframe] = useState<string>("1D")
+  const [indicators, setIndicators] = useState<IndicatorData | null>(null)
 
-  const coinInfo = COIN_MAP[symbol.replace("/", "").toUpperCase()] || { id: "bitcoin", price: 50000 }
-  const coinId = coinInfo.id
+  const coinSymbol = symbol.replace("/", "").replace("USDT", "").replace("USD", "")
 
-  const fetchOHLC = useCallback(async (days: number) => {
+  const fetchOHLC = useCallback(async (tf: string) => {
+    setLoading(true)
+    setError(null)
     try {
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?days=${days}&vs_currency=usd`
-      )
-      if (!res.ok) throw new Error("Rate limited")
-      const raw: number[][] = await res.json()
-      if (!Array.isArray(raw) || raw.length === 0) throw new Error("No data")
-      const data: CandlestickData[] = raw.map(([ts, open, high, low, close]) => ({
-        time: (ts / 1000) as Time, open, high, low, close,
+      const res = await fetch(`/api/trading/history?symbol=${coinSymbol}&timeframe=${tf}`)
+      if (!res.ok) throw new Error("Failed to fetch")
+      const json = await res.json()
+      const data = json?.data ?? json
+      if (!data?.candles?.length) throw new Error("No data")
+
+      const candles: Candle[] = data.candles
+
+      // Set chart data
+      const chartData = candles.map((c) => ({
+        time: c.time as Time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
       }))
-      if (seriesRef.current) seriesRef.current.setData(data)
+
+      if (seriesRef.current) {
+        seriesRef.current.setData(chartData)
+        chartRef.current?.timeScale().fitContent()
+      }
+
+      // Set indicators
+      if (data.indicators) setIndicators(data.indicators)
     } catch {
-      const mockData = generateMockOHLC(coinInfo.price, days)
-      if (seriesRef.current) seriesRef.current.setData(mockData)
+      setError("Unable to load chart data")
     }
     setLoading(false)
-  }, [coinId, coinInfo.price])
+  }, [coinSymbol])
 
-  useEffect(() => { Promise.resolve().then(() => fetchOHLC(period)) }, [period, fetchOHLC])
+  useEffect(() => {
+    fetchOHLC(timeframe)
+  }, [timeframe, fetchOHLC])
 
   useEffect(() => {
     if (!containerRef.current) return
 
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
+        background: { type: LightweightCharts.ColorType.Solid, color: "transparent" },
         textColor: "#9ca3af",
       },
       grid: {
@@ -100,11 +102,11 @@ export function TradingChart({ symbol = "BTCUSD" }: TradingChartProps) {
         horzLines: { color: "rgba(75,85,99,0.2)" },
       },
       rightPriceScale: { borderColor: "rgba(75,85,99,0.2)" },
-      timeScale: { borderColor: "rgba(75,85,99,0.2)" },
+      timeScale: { borderColor: "rgba(75,85,99,0.2)", timeVisible: true, secondsVisible: false },
       width: containerRef.current.clientWidth,
       height: 400,
-      handleScroll: false,
-      handleScale: false,
+      handleScroll: true,
+      handleScale: true,
     })
 
     const CandlestickSeriesDef = (LightweightCharts as any).CandlestickSeries
@@ -140,11 +142,9 @@ export function TradingChart({ symbol = "BTCUSD" }: TradingChartProps) {
       <Card className="lg:col-span-2">
         <CardContent className="flex flex-col items-center justify-center py-16">
           <AlertCircle className="h-12 w-12 text-destructive/60 mb-4" />
-          <p className="text-muted-foreground mb-2">{error}</p>
-          <p className="text-sm text-muted-foreground/60 mb-4">CoinGecko API may be rate-limited</p>
-          <Button variant="outline" size="sm" onClick={() => fetchOHLC(period)}>
-            <RefreshCw className="h-4 w-4 mr-1.5" />
-            Retry
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => fetchOHLC(timeframe)}>
+            <RefreshCw className="h-4 w-4 mr-1.5" /> Retry
           </Button>
         </CardContent>
       </Card>
@@ -154,37 +154,61 @@ export function TradingChart({ symbol = "BTCUSD" }: TradingChartProps) {
   return (
     <Card className="lg:col-span-2 overflow-hidden">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
             <CandlestickChart className="h-4 w-4 text-primary" />
-            {symbol.replace("/", "")} Chart
-          </CardTitle>
+            <span className="text-base font-semibold">{coinSymbol}/USDT Chart</span>
+            {indicators && (
+              <span className="text-xs text-muted-foreground">
+                RSI: {indicators.rsi} · SMA20: ${indicators.sma20.toLocaleString()} · ATR: ${indicators.atr}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
-            {PERIODS.map((p) => (
+            {TIMEFRAMES.map((tf) => (
               <Button
-                key={p.label}
-                variant={period === p.days ? "default" : "ghost"}
+                key={tf.label}
+                variant={timeframe === tf.days ? "default" : "ghost"}
                 size="sm"
                 className="h-7 px-2 text-xs"
-                onClick={() => setPeriod(p.days)}
+                onClick={() => setTimeframe(tf.days)}
               >
-                {p.label}
+                {tf.label}
               </Button>
             ))}
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-0 relative">
-        <div ref={containerRef} className="h-[400px] w-full" />
+        <div ref={containerRef} className="w-full" />
         {loading && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-            <div className="flex flex-col items-center gap-3">
-              <CandlestickChart className="h-8 w-8 text-muted-foreground/40 animate-pulse" />
-              <Skeleton className="h-4 w-32" />
-            </div>
+          <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
+            <Skeleton className="h-[400px] w-[95%] rounded-lg mx-auto" />
           </div>
         )}
       </CardContent>
+      {indicators && (
+        <div className="px-4 pb-3 flex flex-wrap gap-3 text-xs text-muted-foreground border-t pt-3">
+          <span className="flex items-center gap-1">
+            Bollinger: <span className="text-foreground font-medium">{indicators.bollinger.width}% width</span>
+          </span>
+          <span className="flex items-center gap-1">
+            MACD: <span className={`font-medium ${indicators.macd.direction === "bullish" ? "text-emerald-500" : "text-red-500"}`}>
+              {indicators.macd.direction}
+            </span>
+          </span>
+          <span className="flex items-center gap-1">
+            Volume: <span className="text-foreground font-medium capitalize">{indicators.volumeProfile.trend}</span>
+          </span>
+          <span className="flex items-center gap-1">
+            SMA50: <span className="text-foreground font-medium">${indicators.sma50.toLocaleString()}</span>
+          </span>
+        </div>
+      )}
     </Card>
   )
+}
+
+function createChart(container: HTMLElement, options: any) {
+  return LightweightCharts.createChart(container, options)
 }
