@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
+import { cookies } from "next/headers"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -12,16 +13,42 @@ import { Button } from "@/components/ui/button"
 export const metadata: Metadata = { title: "Profile", robots: { index: false, follow: false } }
 export const dynamic = "force-dynamic"
 
-export default async function ProfilePage() {
+const SESSION_COOKIES = ["aiverse_local_session", "aiverse_google_session", "aiverse_github_session"]
+
+function parseSession(value: string) {
+  try { return JSON.parse(Buffer.from(value, "base64").toString()) as { id: string; email: string; role?: string } }
+  catch { return null }
+}
+
+async function getUserId(): Promise<string | null> {
+  // Try Supabase first
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/login")
+  if (user?.id) return user.id
+
+  // Fallback: check custom session cookies
+  try {
+    const store = await cookies()
+    for (const name of SESSION_COOKIES) {
+      const cookie = store.get(name)
+      if (cookie?.value) {
+        const data = parseSession(cookie.value)
+        if (data?.id) return data.id
+      }
+    }
+  } catch {}
+  return null
+}
+
+export default async function ProfilePage() {
+  const userId = await getUserId()
+  if (!userId) redirect("/login")
 
   const [dbUser, favorites, bookmarks, reviews] = await Promise.all([
-    prisma.user.findUnique({ where: { id: user.id } }),
-    prisma.favorite.findMany({ where: { userId: user.id }, include: { tool: { select: { name: true, slug: true, tagline: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
-    prisma.bookmark.findMany({ where: { userId: user.id }, include: { tool: { select: { name: true, slug: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
-    prisma.review.findMany({ where: { userId: user.id }, include: { tool: { select: { name: true, slug: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.favorite.findMany({ where: { userId }, include: { tool: { select: { name: true, slug: true, tagline: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.bookmark.findMany({ where: { userId }, include: { tool: { select: { name: true, slug: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.review.findMany({ where: { userId }, include: { tool: { select: { name: true, slug: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
   ])
 
   return (
@@ -29,11 +56,11 @@ export default async function ProfilePage() {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
           <Avatar className="h-16 w-16">
-            <AvatarFallback className="text-lg">{dbUser?.name?.charAt(0) || user.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+            <AvatarFallback className="text-lg">{dbUser?.name?.charAt(0) || dbUser?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{dbUser?.name || "User"}</h1>
-            <p className="text-muted-foreground">{user.email}</p>
+            <p className="text-muted-foreground">{dbUser?.email || ""}</p>
           </div>
           <div className="flex gap-2">
             <Badge variant="secondary">{dbUser?.role}</Badge>
