@@ -3,9 +3,9 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
-import { LayoutDashboard, Grid3X3, Users, Star, Mail, BarChart3, Settings, PlusCircle, List, Tags, MessageSquare, Newspaper, Download } from "lucide-react"
+import { LayoutDashboard, Grid3X3, Users, Star, Mail, BarChart3, Settings, PlusCircle, List, Tags, MessageSquare, Newspaper, Download, LogOut } from "lucide-react"
 
-const LOCAL_AUTH_COOKIE = "aiverse_local_session"
+const SESSION_COOKIES = ["aiverse_local_session", "aiverse_google_session", "aiverse_github_session"]
 
 const adminLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -42,18 +42,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     console.error("[ADMIN_LAYOUT] Supabase auth", error)
   }
 
-  // Fallback: check local auth cookie
+  // Fallback: check custom session cookies
   if (!userId) {
     try {
       const cookieStore = await cookies()
-      const session = cookieStore.get(LOCAL_AUTH_COOKIE)
-      if (session?.value) {
-        const data = JSON.parse(Buffer.from(session.value, "base64").toString())
-        userId = data.id
-        userRole = data.role
+      for (const name of SESSION_COOKIES) {
+        const session = cookieStore.get(name)
+        if (session?.value) {
+          const data = JSON.parse(Buffer.from(session.value, "base64").toString())
+          userId = data.id
+          userRole = data.role
+          break
+        }
       }
     } catch (error) {
-      console.error("[ADMIN_LAYOUT] Local auth cookie", error)
+      console.error("[ADMIN_LAYOUT] Auth cookie", error)
     }
   }
 
@@ -69,7 +72,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen">
       <aside className="hidden lg:flex w-64 flex-col border-r bg-background fixed left-0 top-0 bottom-0 z-30 pt-16">
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {adminLinks.map((link) => (
+            {adminLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -79,6 +82,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {link.label}
             </Link>
           ))}
+          <hr className="my-2 border-border/50" />
+          <form action="/api/auth/logout" method="POST">
+            <button type="submit" className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </form>
         </div>
       </aside>
       <main className="flex-1 lg:pl-64">
