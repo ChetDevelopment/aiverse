@@ -1,18 +1,41 @@
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
+
+const SESSION_COOKIES = ["aiverse_local_session", "aiverse_google_session", "aiverse_github_session"]
 
 export async function getCurrentUser() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+  if (supabaseUser) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: supabaseUser.id },
+      select: { id: true, email: true, name: true, avatarUrl: true, role: true },
+    })
+    return dbUser
+  }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, email: true, name: true, avatarUrl: true, role: true },
-  })
+  try {
+    const cookieStore = await cookies()
+    for (const name of SESSION_COOKIES) {
+      const session = cookieStore.get(name)
+      if (session?.value) {
+        const data = JSON.parse(Buffer.from(session.value, "base64").toString())
+        if (data.email) {
+          return {
+            id: data.id,
+            email: data.email,
+            name: data.name || null,
+            avatarUrl: data.avatarUrl || null,
+            role: data.role || "USER",
+          }
+        }
+      }
+    }
+  } catch {}
 
-  return dbUser
+  return null
 }
 
 export async function requireAuth() {
