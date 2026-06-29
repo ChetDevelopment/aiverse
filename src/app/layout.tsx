@@ -57,8 +57,8 @@ export const metadata: Metadata = {
     google: "MJqJ5SHI1rxf9FcN3zyBfL9a7eH7wWJFueLF6swUl9Q",
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/image.png",
+    shortcut: "/image.png",
   },
 }
 
