@@ -6,6 +6,8 @@ import { rateLimit, rateLimitResponse } from "@/lib/rate-limit"
 import { apiError } from "@/lib/api-utils"
 import bcrypt from "bcryptjs"
 
+const LOCAL_AUTH_COOKIE = "aiverse_local_session"
+
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") || "unknown"
   const { allowed } = rateLimit(`register:${ip}`, 3, 60000)
@@ -29,11 +31,12 @@ export async function POST(request: Request) {
     const existingUserCount = await prisma.user.count()
     const isFirstUser = existingUserCount === 0
     const passwordHash = await bcrypt.hash(parsed.data.password, 10)
+    const role = isFirstUser ? "ADMIN" as const : "USER" as const
 
     const userData = {
       name: parsed.data.name,
       passwordHash,
-      ...(isFirstUser ? { role: "ADMIN" as const } : {}),
+      role,
     }
 
     if (authData.user && !authError) {
@@ -47,6 +50,20 @@ export async function POST(request: Request) {
         where: { email: parsed.data.email },
         update: userData,
         create: { email: parsed.data.email, ...userData },
+      })
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } })
+    if (user) {
+      const session = Buffer.from(
+        JSON.stringify({ id: user.id, email: user.email, role: user.role })
+      ).toString("base64")
+      const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
+      const cookie = `${LOCAL_AUTH_COOKIE}=${session}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${60 * 60 * 24 * 7}`
+      const redirectTo = role === "ADMIN" ? "/admin" : "/"
+      return new Response(JSON.stringify({ success: true, redirect: redirectTo }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
       })
     }
 

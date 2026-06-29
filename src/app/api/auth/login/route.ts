@@ -35,12 +35,17 @@ export async function POST(request: Request) {
   if (supabaseSuccess) {
     try {
       const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) await syncOAuthUser(user)
+      const { data: { user: supaUser } } = await supabase.auth.getUser()
+      if (supaUser) {
+        await syncOAuthUser(supaUser)
+        const dbUser = await prisma.user.findUnique({ where: { email } })
+        const redirectTo = dbUser?.role === "ADMIN" ? "/admin" : "/"
+        return NextResponse.json({ success: true, redirect: redirectTo })
+      }
     } catch (error) {
       console.error("[API_AUTH_LOGIN] Sync OAuth user", error)
     }
-    return NextResponse.json({ success: true, redirect: "/admin" })
+    return NextResponse.json({ success: true, redirect: "/" })
   }
 
   // Local auth fallback (works without Supabase)
@@ -53,7 +58,8 @@ export async function POST(request: Request) {
       ).toString("base64")
       const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
       const cookie = `${LOCAL_AUTH_COOKIE}=${session}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${60 * 60 * 24 * 7}`
-      return new Response(JSON.stringify({ success: true, redirect: "/admin" }), {
+      const redirectTo = user.role === "ADMIN" ? "/admin" : "/"
+      return new Response(JSON.stringify({ success: true, redirect: redirectTo }), {
         status: 200,
         headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
       })
