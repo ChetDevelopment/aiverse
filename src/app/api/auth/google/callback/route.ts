@@ -48,13 +48,17 @@ export async function GET(request: NextRequest) {
     const encoded = Buffer.from(JSON.stringify(session)).toString("base64")
     const isSecure = origin.startsWith("https://")
 
-    return new Response(null, {
-      status: 307,
-      headers: {
-        Location: `${origin}${next}`,
-        "Set-Cookie": `aiverse_google_session=${encoded}; Path=/; HttpOnly; ${isSecure ? "Secure; " : ""}SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`,
-      },
+    const redirectUrl = new URL(`${origin}${next}`)
+    redirectUrl.searchParams.set("google_auth", "success")
+    const response = NextResponse.redirect(redirectUrl)
+    response.cookies.set("aiverse_google_session", encoded, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
     })
+    return response
   } catch (e) {
     console.error("[GOOGLE_AUTH] Callback error:", e)
     return NextResponse.redirect(`${origin}/login?error=google_auth_failed`)
