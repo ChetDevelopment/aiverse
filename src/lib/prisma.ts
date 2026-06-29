@@ -5,19 +5,19 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
+const FALLBACK_URL = "postgresql://neondb_owner:npg_EPhASU9mK6wt@ep-tiny-firefly-ai6i1ws1-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require"
+
 function getPrisma(): PrismaClient {
   if (globalForPrisma.prisma) return globalForPrisma.prisma
 
-  const url = process.env.DATABASE_URL
-  if (url) {
-    try {
-      const adapter = new PrismaPg({ connectionString: url })
-      const client = new PrismaClient({ adapter })
-      globalForPrisma.prisma = client
-      return client
-    } catch (e) {
-      console.error("[PRISMA] Adapter failed:", (e as Error)?.message)
-    }
+  const url = process.env.DATABASE_URL || FALLBACK_URL
+  try {
+    const adapter = new PrismaPg({ connectionString: url })
+    const client = new PrismaClient({ adapter })
+    globalForPrisma.prisma = client
+    return client
+  } catch (e) {
+    console.error("[PRISMA] Adapter failed:", (e as Error)?.message)
   }
 
   const returns: Record<string, unknown> = {
