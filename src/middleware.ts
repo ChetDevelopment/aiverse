@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
 const LOCAL_AUTH_COOKIE = "aiverse_local_session"
+const GOOGLE_AUTH_COOKIE = "aiverse_google_session"
 
 // In-memory rate limit map (edge-compatible)
 const rateMap = new Map<string, { count: number; resetAt: number }>()
@@ -77,15 +78,24 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Check local auth session for admin access
+  // Check local and google auth sessions for admin access
   let isLocalAdmin = false
   if (!user) {
-    const sessionCookie = request.cookies.get(LOCAL_AUTH_COOKIE)
-    if (sessionCookie?.value) {
+    const localCookie = request.cookies.get(LOCAL_AUTH_COOKIE)
+    if (localCookie?.value) {
       try {
-        const data = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString())
+        const data = JSON.parse(Buffer.from(localCookie.value, "base64").toString())
         isLocalAdmin = data.role === "ADMIN"
       } catch {}
+    }
+    if (!isLocalAdmin) {
+      const googleCookie = request.cookies.get(GOOGLE_AUTH_COOKIE)
+      if (googleCookie?.value) {
+        try {
+          const data = JSON.parse(Buffer.from(googleCookie.value, "base64").toString())
+          isLocalAdmin = data.role === "ADMIN"
+        } catch {}
+      }
     }
   }
 

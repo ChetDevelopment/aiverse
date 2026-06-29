@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loginSchema } from "@/lib/validations"
-import { createClient } from "@/lib/supabase/client"
 
 function LoginContent() {
   const searchParams = useSearchParams()
@@ -50,15 +49,14 @@ function LoginContent() {
 
   const [oauthLoading, setOauthLoading] = React.useState<string | null>(null)
 
-  async function handleOAuthLogin(provider: "google" | "github") {
-    setOauthLoading(provider)
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
-    })
+  function handleGoogleLogin() {
+    setOauthLoading("google")
+    window.location.href = "/api/auth/google"
+  }
+
+  async function handleGithubLogin() {
+    setOauthLoading("github")
+    window.location.href = "/api/auth/google"
   }
 
   return (
@@ -134,7 +132,7 @@ function LoginContent() {
         <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
-            onClick={() => handleOAuthLogin("github")}
+            onClick={handleGithubLogin}
             className="w-full"
             disabled={oauthLoading === "github"}
           >
@@ -143,7 +141,7 @@ function LoginContent() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleOAuthLogin("google")}
+            onClick={handleGoogleLogin}
             className="w-full"
             disabled={oauthLoading === "google"}
           >
