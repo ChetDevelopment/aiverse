@@ -51,7 +51,8 @@ export async function POST(request: Request) {
       const session = Buffer.from(
         JSON.stringify({ id: user.id, email: user.email, role: user.role })
       ).toString("base64")
-      const cookie = `${LOCAL_AUTH_COOKIE}=${session}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`
+      const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
+      const cookie = `${LOCAL_AUTH_COOKIE}=${session}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${60 * 60 * 24 * 7}`
       return new Response(JSON.stringify({ success: true, redirect: "/admin" }), {
         status: 200,
         headers: { "Content-Type": "application/json", "Set-Cookie": cookie },

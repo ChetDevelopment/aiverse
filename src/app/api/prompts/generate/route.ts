@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { apiError, apiSuccess } from "@/lib/api-utils"
 import { prisma } from "@/lib/prisma"
+import { guardAPI } from "@/lib/api-guard"
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434"
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2"
@@ -45,6 +46,9 @@ async function generateWithOpenAI(systemPrompt: string, userMessage: string): Pr
 }
 
 export async function POST(request: NextRequest) {
+  const g = guardAPI(request, "sensitive")
+  if (!g.passed) return g.response
+
   try {
     const { description, toolSlug, category, difficulty } = await request.json()
 

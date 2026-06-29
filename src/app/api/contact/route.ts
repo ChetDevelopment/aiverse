@@ -21,6 +21,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const { requireApiAdmin } = await import("@/lib/api-utils")
+  try {
+    await requireApiAdmin()
+  } catch {
+    return apiError("Unauthorized", 401)
+  }
+
   const messages = await prisma.contactMessage.findMany({
     orderBy: { createdAt: "desc" },
   })

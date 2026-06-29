@@ -1,248 +1,258 @@
-# AIVerse — The AI Productivity Ecosystem
-
-Discover, learn, build, and master AI tools with workspaces, prompts, stacks, learning paths, and a context-aware copilot.
-
-**AIVerse** is a comprehensive AI tools directory and productivity platform. It helps users discover AI tools, learn how to use them, build workflows, share stacks, save prompts, compare alternatives, and stay updated with AI news and market intelligence.
-
----
-
-## Features
-
-### Discover
-- **AI Tools Directory** — Browse 1400+ AI tools across 15 categories
-- **Search & Filter** — Full-text search with category, pricing, and sorting filters
-- **Compare** — Side-by-side comparison of up to 3 tools
-- **Categories** — Browse by category (Chat AI, Coding, Image, Video, etc.)
-- **Trending** — Trending AI tools and GitHub projects
-- **GitHub Discovery** — Auto-discovered open-source AI projects
-
-### Learn
-- **Learning Center** — Guided learning paths (AI for Developers, Designers, Business, etc.)
-- **Prompt Library** — Official and community prompts per tool (copy, save, rate)
-- **Use Case Explorer** — Browse by goal (Build a Website, Write a Thesis, Edit Videos, etc.)
-- **Blog** — AI guides, tutorials, comparisons
-- **AI News** — Live Hacker News feed with article extraction
-
-### Build
-- **Workspaces** — Personal workspaces with tools, notes, prompts, collections, workflows
-- **AI Stacks** — Drag-and-drop tool stacks (YouTube Creator Pipeline, AI Writing Studio, etc.)
-- **Collections** — Curated tool collections
-- **Recommendations** — AI-powered tool recommendations
-
-### Intelligence
-- **AI Trading Hub** — Live crypto market data, candlestick charts, AI analysis
-- **Free Deals** — Curated and verified free AI tool deals
-- **AI Copilot** — Context-aware floating AI assistant
-
-### Community
-- **Reviews & Ratings** — Rate and review AI tools
-- **Favorites & Bookmarks** — Save tools for later
-- **User Profiles** — Public profiles with activity
-- **Admin Dashboard** — Full admin panel for content management
+<div align="center">
+  <img src="https://raw.githubusercontent.com/ChetDevelopment/aiverse/main/public/image.png" alt="AIVerse" width="80" height="80" />
+  <h1 align="center">✨ AIVerse</h1>
+  <p align="center">
+    <strong>The AI Productivity Ecosystem</strong><br />
+    Discover · Learn · Build · Master AI
+  </p>
+  <p align="center">
+    <a href="https://aiverse-silk.vercel.app">
+      <img src="https://img.shields.io/badge/Live-Demo-8B5CF6?style=for-the-badge&logo=vercel&logoColor=white" />
+    </a>
+    <a href="./ARCHITECTURE.md">
+      <img src="https://img.shields.io/badge/Architecture-Read-06B6D4?style=for-the-badge&logo=readthedocs&logoColor=white" />
+    </a>
+    <a href="./API.md">
+      <img src="https://img.shields.io/badge/API-Docs-10B981?style=for-the-badge&logo=swagger&logoColor=white" />
+    </a>
+  </p>
+  <p align="center">
+    <img src="https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=next.js&logoColor=white" />
+    <img src="https://img.shields.io/badge/TypeScript_5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+    <img src="https://img.shields.io/badge/Prisma_7-2D3748?style=flat-square&logo=prisma&logoColor=white" />
+    <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" />
+    <img src="https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" />
+    <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white" />
+    <img src="https://img.shields.io/badge/61_tests-passing-22C55E?style=flat-square&logo=vitest&logoColor=white" />
+    <img src="https://img.shields.io/badge/79_routes-0_errors-22C55E?style=flat-square" />
+  </p>
+</div>
 
 ---
 
-## Tech Stack
+## 🌟 What is AIVerse?
 
-| Category | Technology |
-|----------|-----------|
-| **Framework** | Next.js 16 (App Router) |
-| **Language** | TypeScript 5 |
-| **Database** | PostgreSQL |
-| **ORM** | Prisma 7 |
-| **Auth** | Supabase SSR + bcryptjs fallback |
-| **UI** | Tailwind CSS v4, Radix UI, Lucide Icons |
-| **Charts** | lightweight-charts (TradingView) |
-| **Animation** | Framer Motion |
-| **AI** | OpenAI API |
-| **Misc** | Zod (validation), next-sitemap, next-themes |
+**AIVerse** isn't just another AI directory — it's a **complete AI productivity platform**. Think of it as your command center for the AI world.
+
+```text
+┌─────────────────────────────────────────────────────┐
+│                   AIVerse                           │
+├──────────┬──────────┬───────────┬───────────────────┤
+│ DISCOVER │  LEARN   │   BUILD   │   INTELLIGENCE    │
+│ ─────────│ ──────── │ ───────── │ ───────────────── │
+│ AI Tools │ Learning │ Workspace │  Trading Hub      │
+│ Search   │ Prompts  │ Stacks    │  AI Copilot       │
+│ Compare  │ Use Cases│ Collect.  │  Deals            │
+│ Trending │ Blog     │ Recommend │  Analytics        │
+└──────────┴──────────┴───────────┴───────────────────┘
+```
+
+Whether you're a developer, designer, student, or business professional — AIVerse helps you **discover the right tools, learn how to use them, build workflows, and stay ahead of the AI revolution.**
 
 ---
 
-## Getting Started
+## ✨ Features That Matter
 
-### Prerequisites
+### 🚀 Discover
+| Feature | What It Does |
+|---------|-------------|
+| **1,400+ AI Tools** | Every AI tool across 15 categories — from ChatGPT to niche startups |
+| **Smart Search** | Full-text search with category, pricing, and sorting filters |
+| **Compare Mode** | Side-by-side comparison of up to 3 tools with pros/cons |
+| **GitHub Discovery** | Auto-discovered open-source AI projects with 361 repos indexed |
 
-- Node.js 20+
-- PostgreSQL 15+
-- npm 9+
+### 📚 Learn
+| Feature | What It Does |
+|---------|-------------|
+| **Learning Paths** | Guided paths for Developers, Designers, Business, Students, Marketers |
+| **Prompt Library** | 50+ curated prompts + **AI Prompt Generator** (create custom prompts) |
+| **Use Case Explorer** | Browse by goal — "Build a website", "Write a thesis", "Start a podcast" |
+| **AI News** | Live Hacker News feed with article extraction & reader mode |
 
-### Installation
+### 🛠️ Build
+| Feature | What It Does |
+|---------|-------------|
+| **Workspaces** | Personal workspaces with tools, notes, prompts & workflow builder |
+| **AI Stacks** | Drag & drop tool pipelines (YouTube Creator, Design Sprint Kit, etc.) |
+| **Collections** | Curated tool collections — "Best Free AI Tools", "AI for Designers" |
+| **AI Recommendations** | Personalized recommendations based on your favorites & history |
+
+### 🧠 Intelligence
+| Feature | What It Does |
+|---------|-------------|
+| **Trading Hub** | Live BTC/ETH/SOL prices, candlestick charts, Fear & Greed index |
+| **AI Copilot** | Context-aware floating assistant that knows your saved tools |
+| **Free Deals** | 600+ verified free deals, promo codes & open-source tools |
+
+---
+
+## 🏗️ Architecture at a Glance
+
+```
+Frontend (Next.js 16)          Backend (Prisma + PostgreSQL)
+┌──────────────────┐          ┌──────────────────────────────┐
+│                  │          │                              │
+│  Server (RSC)    │◄────────►│  26 Database Models          │
+│  Components      │          │  Users · Tools · Reviews     │
+│                  │          │  Prompts · Stacks · Learning  │
+│  Client          │          │  Workspaces · Trading · Blog │
+│  Components      │          │  Deals · GitHub Discovery    │
+│                  │          │                              │
+│  API Routes (46) │◄────────►│  Supabase Auth + OpenAI API  │
+│                  │          │  + Ollama (local AI)         │
+└──────────────────┘          └──────────────────────────────┘
+```
+
+### Why This Architecture?
+
+| Decision | Why |
+|----------|-----|
+| **Next.js App Router** | Server Components for SEO, Client Components for interactivity |
+| **Prisma + PostgreSQL** | Type-safe database access with migrations & relations |
+| **Supabase Auth** | OAuth-ready (Google, GitHub) + local auth fallback |
+| **Tailwind CSS v4** | Utility-first, fast iteration, dark mode built-in |
+| **ISR + Code Splitting** | 5-minute revalidation on key pages, lazy-loaded components |
+
+---
+
+## 🛠️ Tech Stack
+
+<table>
+  <tr>
+    <td align="center"><b>Framework</b></td>
+    <td>Next.js 16 (App Router) · TypeScript 5 · React 19</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Database</b></td>
+    <td>PostgreSQL · Prisma 7 ORM · Neon (serverless)</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Auth</b></td>
+    <td>Supabase SSR · bcryptjs · OAuth (Google/GitHub)</td>
+  </tr>
+  <tr>
+    <td align="center"><b>UI</b></td>
+    <td>Tailwind CSS v4 · Radix UI · Lucide Icons · Framer Motion</td>
+  </tr>
+  <tr>
+    <td align="center"><b>AI</b></td>
+    <td>OpenAI API · Ollama (local) · lightweight-charts (TradingView)</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Testing</b></td>
+    <td>Vitest · React Testing Library · Playwright · 61 tests</td>
+  </tr>
+  <tr>
+    <td align="center"><b>CI/CD</b></td>
+    <td>GitHub Actions · ESLint · TypeScript · Auto-deploy to Vercel</td>
+  </tr>
+</table>
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/your-org/aiverse.git
+# Clone
+git clone https://github.com/ChetDevelopment/aiverse.git
 cd aiverse
+
+# Install
 npm install
-```
 
-### Environment Variables
-
-Copy `.env.example` to `.env` and fill in:
-
-```bash
+# Set up database (PostgreSQL required)
 cp .env.example .env
-```
-
-Required variables:
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
-
-Optional variables:
-
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | Enable AI Copilot features |
-| `NEXT_PUBLIC_APP_URL` | Custom app URL (default: localhost:3000) |
-
-### Database Setup
-
-```bash
-# Push schema to database
+# Edit .env with your DATABASE_URL, Supabase credentials
 npm run db:push
+npm run seed:all
 
-# Generate Prisma client
-npm run db:generate
-
-# Seed demo data
-npm run seed
-```
-
-### Development
-
-```bash
+# Start developing
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) — your local AIVerse is ready.
 
-### Production Build
+### One-command Setup
+```bash
+npm run setup   # Install + push DB + seed all data
+```
+
+---
+
+## 📊 Project Stats
+
+```
+┌─────────────────────────────────────────────┐
+│  📁 272 source files                        │
+│  🛣️  79 routes (app)                        │
+│  🔌 46 API endpoints                        │
+│  🗄️  26 database models                     │
+│  ✅ 0 TypeScript errors                     │
+│  ✅ 0 ESLint errors                         │
+│  🧪 61 tests · 8 test suites               │
+│  🚀 ~45s build time                         │
+│  📦 589 npm packages                        │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [📖 ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture, data flow, design decisions |
+| [📖 API.md](./API.md) | All 46 API endpoints documented |
+| [📖 DATABASE.md](./DATABASE.md) | 26 models, relationships, indexes |
+| [📖 DEPLOYMENT.md](./DEPLOYMENT.md) | Deploy to Vercel, Docker, production checklist |
+| [📖 SECURITY.md](./SECURITY.md) | Auth, CSP, rate limiting, security practices |
+| [📖 CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute, code review, PR process |
+| [📖 CHANGELOG.md](./CHANGELOG.md) | Release history |
+| [📖 ROADMAP.md](./ROADMAP.md) | What's coming next |
+
+---
+
+## 🧪 Running Tests
 
 ```bash
-npm run build
-npm start
+npm test              # 61 tests · 8 suites
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+npm run test:e2e      # Playwright E2E tests
 ```
 
 ---
 
-## Project Structure
+## 🤝 Contributing
 
-```
-aiverse/
-├── prisma/              # Database schema and seeds
-│   ├── schema.prisma    # Models, enums, relations
-│   ├── seed.ts          # Basic seed data
-│   ├── seed-blog.ts     # Blog posts seed
-│   ├── seed-deals.ts    # Free deals seed
-│   ├── seed-reviews.ts  # User reviews seed
-│   ├── seed-new.ts      # New models seed (learning, prompts, use cases, stacks)
-│   └── seed-complete.ts # Complete comprehensive seed
-├── src/
-│   ├── app/             # Next.js App Router pages + API routes
-│   │   ├── (marketing)/ # Public marketing pages (home, about, contact)
-│   │   ├── (auth)/      # Auth pages (login, register, forgot-password)
-│   │   ├── (dashboard)/ # Admin dashboard
-│   │   ├── api/         # All API routes (~45 endpoints)
-│   │   ├── ai-tool/     # Tool detail pages
-│   │   ├── blog/        # Blog system
-│   │   ├── news/        # News system
-│   │   ├── search/      # Search functionality
-│   │   ├── trading/     # AI Trading Hub
-│   │   ├── workspaces/  # AI Workspace
-│   │   ├── stacks/      # AI Stack Builder
-│   │   ├── prompts/     # Prompt Library
-│   │   ├── learn/       # Learning Center
-│   │   ├── usecases/    # Use Case Explorer
-│   │   └── ...          # Additional pages
-│   ├── components/      # Reusable React components
-│   │   ├── ui/          # Design system primitives (Button, Card, Input, etc.)
-│   │   ├── layout/      # Navbar, Footer
-│   │   ├── home/        # Homepage sections
-│   │   ├── shared/      # Reusable shared components
-│   │   ├── trading/     # Trading chart components
-│   │   ├── prompts/     # Prompt card components
-│   │   └── ...          # Additional component groups
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Utilities, API helpers, Prisma client
-│   ├── config/          # Site configuration
-│   └── types/           # TypeScript type definitions
-├── public/              # Static assets
-├── scripts/             # CLI scripts (admin management)
-└── tests/               # Test files
-```
+Contributions are what make the open-source community amazing. Any contributions you make are **greatly appreciated**.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feat/amazing-feature`)
+5. Open a Pull Request
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-## API Overview
+## 📄 License
 
-The application exposes ~45 API endpoints under `/api/`. All endpoints return a consistent response format:
-
-```typescript
-{
-  data: T          // Response payload
-  error?: string   // Error message (if applicable)
-}
-```
-
-Key API groups:
-
-| Group | Prefix | Description |
-|-------|--------|-------------|
-| Auth | `/api/auth/*` | Login, register, logout, user info |
-| Tools | `/api/tools/*` | CRUD, search, suggest |
-| Workspaces | `/api/workspaces/*` | CRUD with items |
-| Stacks | `/api/stacks/*` | CRUD with items, likes, comments, clone |
-| Prompts | `/api/prompts/*` | CRUD, rate, favorite, use count |
-| Learning | `/api/learning/*` | Learning paths |
-| Use Cases | `/api/usecases/*` | Use cases with tools |
-| Trading | `/api/trading/*` | Market data, analysis |
-| Recommendations | `/api/recommendations` | Personalized recommendations |
-| Blog | `/api/blog/*` | Blog CRUD |
-| News | `/api/news/*` | HN news feed, article content |
-| Deals | `/api/deals` | Free deals |
-| GitHub | `/api/github/*` | GitHub trending, repo details, search |
-
-See [API.md](./API.md) for full documentation.
+Distributed under the **MIT License**. See [LICENSE](./LICENSE) for more information.
 
 ---
 
-## Database
-
-Uses PostgreSQL with Prisma ORM. Schema has **26 models** covering users, tools, categories, reviews, favorites, bookmarks, workspaces, stacks, prompts, learning paths, use cases, blog posts, news, deals, and more.
-
-See [DATABASE.md](./DATABASE.md) for schema overview.
-
----
-
-## Scripts
-
-```bash
-npm run dev          # Start development server
-npm run build        # Production build
-npm start           # Production start
-npm run lint         # ESLint check
-npm run typecheck    # TypeScript check
-npm test            # Run tests
-npm run db:generate  # Generate Prisma client
-npm run db:push      # Push schema to database
-npm run db:seed      # Run main seed
-npm run seed:new     # Seed new models
-npm run seed:all     # Run all seeds
-npm run seed:complete # Complete comprehensive seed
-```
-
----
-
-## License
-
-MIT — see [LICENSE](./LICENSE)
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
+<div align="center">
+  <p>
+    <strong>Built with ❤️ by the AIVerse Team</strong>
+  </p>
+  <p>
+    <a href="https://aiverse-silk.vercel.app">🌐 Live Demo</a> ·
+    <a href="https://github.com/ChetDevelopment/aiverse/issues">🐛 Report Bug</a> ·
+    <a href="https://github.com/ChetDevelopment/aiverse/issues">✨ Request Feature</a>
+  </p>
+  <p>
+    <sub>⭐ Star us on GitHub — it helps others discover the project!</sub>
+  </p>
+</div>

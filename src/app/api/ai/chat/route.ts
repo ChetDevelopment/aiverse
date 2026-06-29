@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { apiError, apiSuccess } from "@/lib/api-utils"
 import { prisma } from "@/lib/prisma"
+import { guardAPI } from "@/lib/api-guard"
 
 interface ChatRequest {
   message: string
@@ -170,6 +171,9 @@ Keep responses under 150 words. Format with bullet points for multiple recommend
 }
 
 export async function POST(request: NextRequest) {
+  const g = guardAPI(request, "sensitive")
+  if (!g.passed) return g.response
+
   try {
     const body: ChatRequest = await request.json()
     const { message, history, context, userId } = body
