@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
-import { LayoutDashboard, Grid3X3, Users, Star, Mail, BarChart3, Settings, PlusCircle, List, Tags, MessageSquare, Newspaper } from "lucide-react"
+import { LayoutDashboard, Grid3X3, Users, Star, Mail, BarChart3, Settings, PlusCircle, List, Tags, MessageSquare, Newspaper, Download } from "lucide-react"
 
 const LOCAL_AUTH_COOKIE = "aiverse_local_session"
 
@@ -20,6 +20,7 @@ const adminLinks = [
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/discover", label: "Discovery", icon: Tags },
+  { href: "/admin/ingestion", label: "Auto Ingestion", icon: Download },
   { href: "/admin/deals", label: "Free Deals", icon: Tags },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ]
