@@ -343,7 +343,7 @@ export default function TradingPage() {
         {/* Main Grid: Chart + Fear & Greed */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* Trading Chart */}
-          <TradingChart symbols={[effectiveSelectedAsset]} />
+          <TradingChart />
 
           {/* Fear & Greed + Quick Stats */}
           <div className="space-y-4">

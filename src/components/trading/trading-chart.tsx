@@ -32,7 +32,9 @@ export function TradingChart({ symbols: externalSymbols, onSymbolsChange }: Prop
   const [allData, setAllData] = useState<Record<string, any> | null>(null)
   const [addSymbol, setAddSymbol] = useState("")
 
-  const currentSymbols = externalSymbols || compareCoins
+  // Clean symbol names: "BTCUSD" → "BTC", "ETH/USDT" → "ETH"
+  const cleanSym = (s: string) => s.toUpperCase().replace("/USDT", "").replace("USD", "").replace("USDT", "")
+  const currentSymbols = (externalSymbols || compareCoins).map(cleanSym)
 
   const fetchData = useCallback(async (tf: string) => {
     setLoading(true)
@@ -138,17 +140,15 @@ export function TradingChart({ symbols: externalSymbols, onSymbolsChange }: Prop
   }, [allData, currentSymbols.join(",")])
 
   function addCoin(sym: string) {
-    const s = sym.toUpperCase()
+    const s = cleanSym(sym)
     if (!s || currentSymbols.length >= 3 || currentSymbols.includes(s)) return
-    if (onSymbolsChange) onSymbolsChange([...currentSymbols, s])
-    else setCompareCoins((prev) => [...prev, s])
+    setCompareCoins((prev) => [...prev, s])
     setAddSymbol("")
   }
 
   function removeCoin(sym: string) {
     if (currentSymbols.length <= 1) return
-    if (onSymbolsChange) onSymbolsChange(currentSymbols.filter((s) => s !== sym))
-    else setCompareCoins((prev) => prev.filter((s) => s !== sym))
+    setCompareCoins((prev) => prev.filter((s) => s !== sym))
   }
 
   return (
