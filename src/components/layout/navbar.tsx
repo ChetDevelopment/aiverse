@@ -2,10 +2,11 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, X, Search, Sparkles, ChevronDown } from "lucide-react"
+import { Menu, X, Search, Sparkles, ChevronDown, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { NotificationBell } from "@/components/notifications/bell"
+import { useUser } from "@/hooks/use-user"
 import { cn } from "@/lib/utils"
 
 interface NavLink {
@@ -58,6 +59,7 @@ const navSections: NavSection[] = [
 ]
 
 export function Navbar() {
+  const { user, loading } = useUser()
   const [isOpen, setIsOpen] = React.useState(false)
   const [scrolled, setScrolled] = React.useState(false)
   const [openSection, setOpenSection] = React.useState<string | null>(null)
@@ -146,16 +148,25 @@ export function Navbar() {
           </Link>
           <NotificationBell />
           <ModeToggle />
-          <Link href="/login" className="hidden sm:block">
-            <Button variant="ghost" size="sm">
-              Log in
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button size="sm" className="hidden sm:inline-flex">
-              Get Started
-            </Button>
-          </Link>
+          {loading ? null : user ? (
+            <Link href={user.role === "ADMIN" ? "/admin" : "/profile"}>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </span>
+                <span className="max-w-[100px] truncate">{user.name || user.email}</span>
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="hidden sm:block">
+                <Button variant="ghost" size="sm">Log in</Button>
+              </Link>
+              <Link href="/register">
+                <Button size="sm" className="hidden sm:inline-flex">Get Started</Button>
+              </Link>
+            </>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -207,20 +218,23 @@ export function Navbar() {
               </div>
             ))}
             <hr className="my-2" />
-            <Link
-              href="/login"
-              className="px-3 py-2.5 text-sm font-medium"
-              onClick={() => setIsOpen(false)}
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register"
-              className="px-3 py-2.5 text-sm font-medium"
-              onClick={() => setIsOpen(false)}
-            >
-              Get Started
-            </Link>
+            {user ? (
+              <Link
+                href={user.role === "ADMIN" ? "/admin" : "/profile"}
+                className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </span>
+                {user.name || user.email}
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="px-3 py-2.5 text-sm font-medium" onClick={() => setIsOpen(false)}>Log in</Link>
+                <Link href="/register" className="px-3 py-2.5 text-sm font-medium" onClick={() => setIsOpen(false)}>Get Started</Link>
+              </>
+            )}
           </nav>
         </div>
       )}
