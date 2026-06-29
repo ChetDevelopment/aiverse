@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -10,10 +11,13 @@ function getPrisma(): PrismaClient {
   const url = process.env.DATABASE_URL
   if (url) {
     try {
-      const client = new PrismaClient()
+      const adapter = new PrismaPg({ connectionString: url })
+      const client = new PrismaClient({ adapter })
       globalForPrisma.prisma = client
       return client
-    } catch {}
+    } catch (e) {
+      console.error("[PRISMA] Adapter failed:", (e as Error)?.message)
+    }
   }
 
   const returns: Record<string, unknown> = {
