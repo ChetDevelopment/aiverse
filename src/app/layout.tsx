@@ -61,8 +61,11 @@ export const metadata: Metadata = {
     "google-adsense-account": "ca-pub-2342877955221604",
   },
   icons: {
-    icon: "/icon-192.png",
-    shortcut: "/icon-192.png",
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/favicon-32.png",
     apple: "/apple-icon.png",
   },
   manifest: "/manifest.json",

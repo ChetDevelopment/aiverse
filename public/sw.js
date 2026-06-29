@@ -1,15 +1,10 @@
 const CACHE = "aiverse-v1"
 const STATIC_ASSETS = [
   "/manifest.json",
-  "/icon-192.svg",
-  "/icon-512.svg",
-  "/icon-192-maskable.svg",
-  "/icon-512-maskable.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/favicon-32.png",
   "/apple-icon.png",
-  "/file.svg",
-  "/next.svg",
-  "/vercel.svg",
-  "/window.svg",
 ]
 
 self.addEventListener("install", (event) => {
