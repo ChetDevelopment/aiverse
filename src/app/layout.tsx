@@ -58,8 +58,8 @@ export const metadata: Metadata = {
     google: "FwFYPIxID3rhR3k1dgTuLg5lkgv2dLlWupqy3EbtNl0",
   },
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
+    icon: "/icon-192.png",
+    shortcut: "/icon-192.png",
     apple: "/apple-icon.png",
   },
   manifest: "/manifest.json",
