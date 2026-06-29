@@ -51,17 +51,21 @@ export async function GET(request: NextRequest) {
       avatarUrl: user.avatarUrl,
     }
     const encoded = Buffer.from(JSON.stringify(session)).toString("base64")
-    const isSecure = origin.startsWith("https://")
+    const target = `${origin}${next}`
+    const cookie = `aiverse_github_session=${encoded}; path=/; ${origin.startsWith("https") ? "secure; " : ""}samesite=lax; max-age=${60*60*24*7}`
 
-    const response = NextResponse.redirect(`${origin}${next}`)
-    response.cookies.set("aiverse_github_session", encoded, {
-      httpOnly: true,
-      secure: isSecure,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+    const html = `<!DOCTYPE html><html><body><script>
+      document.cookie = "${cookie}";
+      window.location.href = "${target}";
+    </script></body></html>`
+
+    return new Response(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html",
+        "Set-Cookie": cookie,
+      },
     })
-    return response
   } catch (e) {
     console.error("[GITHUB_AUTH] Callback error:", e)
     return NextResponse.redirect(`${origin}/login?error=github_auth_failed`)
