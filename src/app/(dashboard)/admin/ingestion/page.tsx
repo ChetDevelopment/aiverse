@@ -28,6 +28,12 @@ export default function AdminIngestionPage() {
   const [counts, setCounts] = useState({ pendingProjects: 0, pendingPrompts: 0 })
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000)
+    return () => clearInterval(id)
+  }, [])
 
   async function fetchLogs() {
     setLoading(true)
@@ -41,7 +47,21 @@ export default function AdminIngestionPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchLogs() }, [])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/ingest/run")
+        const d = await res.json()
+        const data = d?.data ?? d
+        if (cancelled) return
+        setLogs(data.logs || [])
+        setCounts(data.counts || { pendingProjects: 0, pendingPrompts: 0 })
+      } catch {}
+      if (!cancelled) setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   async function runIngestion(source: string) {
     setRunning(source)
@@ -58,7 +78,7 @@ export default function AdminIngestionPage() {
   }
 
   function timeAgo(date: string) {
-    const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+    const s = Math.floor((now - new Date(date).getTime()) / 1000)
     if (s < 60) return "just now"
     if (s < 3600) return `${Math.floor(s / 60)}m ago`
     if (s < 86400) return `${Math.floor(s / 3600)}h ago`

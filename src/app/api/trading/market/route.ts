@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { apiSuccess } from "@/lib/api-utils"
+import { getOrSet } from "@/lib/cache"
 
 const ALL_COINS = [
   { id: "bitcoin", symbol: "BTC/USDT", name: "Bitcoin", logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.png" },
@@ -39,7 +40,7 @@ async function fetchFearGreed() {
 }
 
 export async function GET(request: NextRequest) {
-  try {
+  const getFreshData = async () => {
     const [cgData, fearGreed] = await Promise.all([
       fetchCoinGeckoGlobal().catch(() => null),
       fetchFearGreed(),
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       return `$${(n / 1e3).toFixed(1)}K`
     }
 
-    return apiSuccess({
+    return {
       assets: assets.slice(0, 7),
       allAssets: assets,
       fearGreed,
@@ -106,9 +107,13 @@ export async function GET(request: NextRequest) {
         activeCryptocurrencies: global?.active_cryptocurrencies || 10000,
         markets: global?.markets || 500,
       },
-    })
+    }
+  }
+
+  try {
+    const data = await getOrSet("trading:market", 30_000, getFreshData)
+    return apiSuccess(data)
   } catch {
-    // Fallback with last known real prices
     return apiSuccess({
       assets: [
         { symbol: "BTC/USDT", name: "Bitcoin", price: 67450, change24h: 2.3, volume24h: 2.35e10, marketCap: 1.32e12, logo: "https://cryptologos.cc/logos/bitcoin-btc-logo.png" },

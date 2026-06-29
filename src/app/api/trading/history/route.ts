@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { apiSuccess, apiError } from "@/lib/api-utils"
+import { getOrSet } from "@/lib/cache"
 
 const COIN_MAP: Record<string, string> = {
   BTC: "bitcoin", ETH: "ethereum", SOL: "solana", BNB: "binancecoin",
@@ -44,48 +45,56 @@ export async function GET(request: NextRequest) {
   const timeframe = request.nextUrl.searchParams.get("timeframe") || "1D"
   const days = DAYS_MAP[timeframe] || 30
 
-  const results: Record<string, any> = {}
+  const cacheKey = `trading:history:${symbols.sort().join(",")}:${timeframe}`
+  const ttlMs = timeframe === "5m" || timeframe === "15m" ? 30_000
+    : timeframe === "1H" || timeframe === "4H" ? 60_000
+    : 300_000
 
-  for (const symbol of symbols) {
-    const coinId = COIN_MAP[symbol]
-    const candles = await fetchCoinOHLC(coinId || "", days)
+  const data = await getOrSet(cacheKey, ttlMs, async () => {
+    const results: Record<string, any> = {}
 
-    if (candles) {
-      const closes = candles.map((c: any) => c.close)
-      results[symbol] = {
-        candles,
-        indicator: {
-          rsi: calcRSI(closes, 14),
-          sma20: Math.round(calcSMA(closes, 20)),
-          sma50: Math.round(calcSMA(closes, 50)),
-          atr: Math.round(calcATR(candles.map((c: any) => ({ high: c.high, low: c.low, close: c.close })), 14)),
-        },
-      }
-    } else {
-      // Generate mock
-      const now = Math.floor(Date.now() / 1000)
-      const intervals = days <= 1 ? 96 : days <= 7 ? 168 : days <= 30 ? 30 : 90
-      const intervalSecs = Math.floor((days * 86400) / intervals)
-      let price = symbol === "BTC" ? 67000 : symbol === "ETH" ? 3500 : symbol === "SOL" ? 168 : 100
-      const candles = Array.from({ length: intervals }, (_, i) => {
-        const change = (Math.random() - 0.48) * price * 0.03
-        const o = price
-        const c = price + change
-        const h = Math.max(o, c) * (1 + Math.random() * 0.015)
-        const l = Math.min(o, c) * (1 - Math.random() * 0.015)
-        price = c
-        return { time: now - (intervals - i) * intervalSecs, open: o, high: h, low: l, close: c }
-      })
-      const closes = candles.map((c) => c.close)
-      results[symbol] = {
-        candles,
-        indicator: { rsi: Math.round(calcRSI(closes, 14)), sma20: Math.round(calcSMA(closes, 20)), sma50: Math.round(calcSMA(closes, 50)), atr: Math.round(calcATR(candles.map((c) => ({ high: c.high, low: c.low, close: c.close })), 14)) },
-        mock: true,
+    for (const symbol of symbols) {
+      const coinId = COIN_MAP[symbol]
+      const candles = await fetchCoinOHLC(coinId || "", days)
+
+      if (candles) {
+        const closes = candles.map((c: any) => c.close)
+        results[symbol] = {
+          candles,
+          indicator: {
+            rsi: calcRSI(closes, 14),
+            sma20: Math.round(calcSMA(closes, 20)),
+            sma50: Math.round(calcSMA(closes, 50)),
+            atr: Math.round(calcATR(candles.map((c: any) => ({ high: c.high, low: c.low, close: c.close })), 14)),
+          },
+        }
+      } else {
+        const now = Math.floor(Date.now() / 1000)
+        const intervals = days <= 1 ? 96 : days <= 7 ? 168 : days <= 30 ? 30 : 90
+        const intervalSecs = Math.floor((days * 86400) / intervals)
+        let price = symbol === "BTC" ? 67000 : symbol === "ETH" ? 3500 : symbol === "SOL" ? 168 : 100
+        const candles = Array.from({ length: intervals }, (_, i) => {
+          const change = (Math.random() - 0.48) * price * 0.03
+          const o = price
+          const c = price + change
+          const h = Math.max(o, c) * (1 + Math.random() * 0.015)
+          const l = Math.min(o, c) * (1 - Math.random() * 0.015)
+          price = c
+          return { time: now - (intervals - i) * intervalSecs, open: o, high: h, low: l, close: c }
+        })
+        const closes = candles.map((c) => c.close)
+        results[symbol] = {
+          candles,
+          indicator: { rsi: Math.round(calcRSI(closes, 14)), sma20: Math.round(calcSMA(closes, 20)), sma50: Math.round(calcSMA(closes, 50)), atr: Math.round(calcATR(candles.map((c) => ({ high: c.high, low: c.low, close: c.close })), 14)) },
+          mock: true,
+        }
       }
     }
-  }
 
-  return apiSuccess({ symbols: results, timeframe })
+    return { symbols: results, timeframe }
+  })
+
+  return apiSuccess(data)
 }
 
 function calcSMA(data: number[], period: number): number {

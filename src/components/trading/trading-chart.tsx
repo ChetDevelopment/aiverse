@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as LightweightCharts from "lightweight-charts"
 import type { IChartApi, Time } from "lightweight-charts"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -31,40 +31,42 @@ export function TradingChart({ symbols: externalSymbols, onSymbolsChange }: Prop
   const [indicators, setIndicators] = useState<Record<string, any>>({})
   const [allData, setAllData] = useState<Record<string, any> | null>(null)
   const [addSymbol, setAddSymbol] = useState("")
+  const [retryCounter, setRetryCounter] = useState(0)
 
   // Clean symbol names: "BTCUSD" → "BTC", "ETH/USDT" → "ETH"
   const cleanSym = (s: string) => s.toUpperCase().replace("/USDT", "").replace("USD", "").replace("USDT", "")
   const currentSymbols = (externalSymbols || compareCoins).map(cleanSym)
-
-  const fetchData = useCallback(async (tf: string) => {
-    setLoading(true)
-    setError("")
-    try {
-      const syms = currentSymbols.join(",")
-      const res = await fetch(`/api/trading/history?symbols=${syms}&timeframe=${tf}`)
-      if (!res.ok) throw new Error(`API error: ${res.status}`)
-      const json = await res.json()
-      const data = json?.data ?? json
-      const symbols = data?.symbols || {}
-      setAllData(symbols)
-      if (Object.keys(symbols).length > 0) {
-        const ind: Record<string, any> = {}
-        for (const [sym, val] of Object.entries(symbols) as [string, any][]) {
-          ind[sym] = val.indicator
-        }
-        setIndicators(ind)
-      }
-    } catch (e) {
-      console.error("[TradingChart] fetch error:", e)
-      setError("Failed to load chart data")
-    }
-    setLoading(false)
-  }, [currentSymbols.join(",")])
+  const symbolsKey = currentSymbols.join(",")
 
   // Fetch data on mount and when timeframe/symbols change
   useEffect(() => {
-    fetchData(timeframe)
-  }, [timeframe, fetchData])
+    let cancelled = false
+    setLoading(true)
+    setError("")
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/trading/history?symbols=${symbolsKey}&timeframe=${timeframe}`)
+        if (!res.ok) throw new Error(`API error: ${res.status}`)
+        const json = await res.json()
+        const data = json?.data ?? json
+        const symbols = data?.symbols || {}
+        if (cancelled) return
+        setAllData(symbols)
+        if (Object.keys(symbols).length > 0) {
+          const ind: Record<string, any> = {}
+          for (const [sym, val] of Object.entries(symbols) as [string, any][]) {
+            ind[sym] = val.indicator
+          }
+          setIndicators(ind)
+        }
+      } catch (e) {
+        console.error("[TradingChart] fetch error:", e)
+        if (!cancelled) setError("Failed to load chart data")
+      }
+      if (!cancelled) setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [timeframe, symbolsKey, retryCounter])
 
   // Render chart when data changes
   useEffect(() => {
@@ -137,7 +139,7 @@ export function TradingChart({ symbols: externalSymbols, onSymbolsChange }: Prop
       chart.remove()
       chartRef.current = null
     }
-  }, [allData, currentSymbols.join(",")])
+  }, [allData, symbolsKey])
 
   function addCoin(sym: string) {
     const s = cleanSym(sym)
@@ -192,7 +194,7 @@ export function TradingChart({ symbols: externalSymbols, onSymbolsChange }: Prop
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-10 w-10 text-destructive/60 mb-3" />
             <p className="text-sm text-muted-foreground mb-3">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => fetchData(timeframe)}>
+            <Button variant="outline" size="sm" onClick={() => setRetryCounter((c) => c + 1)}>
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
             </Button>
           </div>

@@ -8,7 +8,8 @@ export async function ingestPublicPrompts(): Promise<IngestionResult> {
   const start = Date.now()
   const log = await createIngestionLog("prompts")
   const errors: string[] = []
-  let created = 0, updated = 0, skipped = 0, failed = 0
+  let created = 0, skipped = 0, failed = 0
+  const updated = 0
 
   // Auto-discover prompt repos from GitHub
   const repos = await discoverPromptRepos()

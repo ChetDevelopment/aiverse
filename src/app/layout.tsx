@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ToastProvider } from "@/components/toast"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { FloatingChat, CommandPalette } from "@/components/client-dynamic"
+import { PwaBackButton } from "@/components/pwa-back-button"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -76,11 +77,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Script
+          <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2342877955221604"
           crossOrigin="anonymous"
           strategy="lazyOnload"
         />
+          <Script id="register-sw" strategy="afterInteractive">
+            {`if ("serviceWorker" in navigator) { navigator.serviceWorker.register("/sw.js") }`}
+          </Script>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-lg focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-2 focus:ring-ring"
@@ -95,6 +99,7 @@ export default function RootLayout({
         >
           <ToastProvider>
             {children}
+            <PwaBackButton />
             <FloatingChat />
             <CommandPalette />
             <MobileBottomNav />

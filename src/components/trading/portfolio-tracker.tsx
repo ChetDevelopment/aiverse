@@ -22,18 +22,17 @@ interface AssetData {
 }
 
 export function PortfolioTracker({ allAssets }: { allAssets: AssetData[] }) {
-  const [holdings, setHoldings] = useState<Holding[]>([])
+  const [holdings, setHoldings] = useState<Holding[]>(() => {
+    try {
+      const saved = localStorage.getItem("aiverse_portfolio")
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return []
+  })
   const [open, setOpen] = useState(false)
   const [newSymbol, setNewSymbol] = useState("BTC")
   const [newEntry, setNewEntry] = useState("")
   const [newAmount, setNewAmount] = useState("")
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("aiverse_portfolio")
-      if (saved) setHoldings(JSON.parse(saved))
-    } catch {}
-  }, [])
 
   useEffect(() => {
     localStorage.setItem("aiverse_portfolio", JSON.stringify(holdings))
