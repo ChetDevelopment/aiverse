@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { exchangeGoogleCode, getGoogleUser } from "@/lib/google-auth"
 import { prisma } from "@/lib/prisma"
 
+const ADMIN_EMAILS = ["vichet.sat@student.passerellesnumeriques.org", "ka383768@gmail.com", "admin@aiverse.ai", "admin@aiverse.com"]
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
@@ -21,6 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=no_email`)
     }
 
+    const role = ADMIN_EMAILS.includes(email) ? "ADMIN" : "USER"
     let user = await prisma.user.findUnique({ where: { email } })
     if (!user) {
       user = await prisma.user.create({
@@ -28,14 +31,16 @@ export async function GET(request: NextRequest) {
           email,
           name: googleUser.name || email.split("@")[0],
           avatarUrl: googleUser.picture || null,
-          role: "USER",
+          role,
         },
       })
-    } else if (googleUser.picture && !user.avatarUrl) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { avatarUrl: googleUser.picture },
-      })
+    } else {
+      const updates: Record<string, unknown> = {}
+      if (googleUser.picture && !user.avatarUrl) updates.avatarUrl = googleUser.picture
+      if (user.role !== role) updates.role = role
+      if (Object.keys(updates).length > 0) {
+        await prisma.user.update({ where: { id: user.id }, data: updates })
+      }
     }
 
     const session = {

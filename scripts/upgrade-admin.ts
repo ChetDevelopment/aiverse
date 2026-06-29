@@ -1,26 +1,14 @@
-import { PrismaPg } from "@prisma/adapter-pg"
-import { PrismaClient } from "@prisma/client"
-
+import { prisma } from "../src/lib/prisma"
+const ADMIN_EMAILS = ["vichet.sat@student.passerellesnumeriques.org", "ka383768@gmail.com", "admin@aiverse.ai", "admin@aiverse.com"]
 async function main() {
-  const url = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/aiverse"
-  const adapter = new PrismaPg({ connectionString: url })
-  const prisma = new PrismaClient({ adapter })
-
-  const email = process.argv[2] || "admin@aiverse.ai"
-  const user = await prisma.user.findUnique({ where: { email } })
-
-  if (!user) {
-    console.log(`User not found: ${email}`)
-    console.log("Available users:")
-    const users = await prisma.user.findMany({ take: 20 })
-    users.forEach((u) => console.log(`  ${u.email} | Role: ${u.role} | ID: ${u.id}`))
-    await prisma.$disconnect()
-    return
+  for (const email of ADMIN_EMAILS) {
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (user) {
+      await prisma.user.update({ where: { email }, data: { role: "ADMIN" } })
+      console.log(`Upgraded ${email} to ADMIN`)
+    }
   }
-
-  await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } })
-  console.log(`Upgraded ${user.email} to ADMIN`)
-  await prisma.$disconnect()
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { email: true, role: true } })
+  console.log("Admins:", admins.map(a => a.email).join(", "))
 }
-
-main().catch((e) => { console.error(e); process.exit(1) })
+main().catch(console.error)
