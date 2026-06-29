@@ -39,7 +39,8 @@ function initPrisma(): PrismaClient {
       return client
     } catch {
       try {
-        const client = new PrismaClient({ datasourceUrl: url })
+        process.env.DATABASE_URL = url
+        const client = new PrismaClient()
         globalForPrisma.prisma = client
         return client
       } catch {}
