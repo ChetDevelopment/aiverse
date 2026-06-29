@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import {
   TrendingUp,
   TrendingDown,
@@ -14,6 +15,7 @@ import {
   DollarSign,
   Activity,
   Heart,
+  Star,
 } from "lucide-react"
 import { TradingChart } from "@/components/trading/trading-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,21 +33,32 @@ interface Asset {
   logo: string
 }
 
-interface Indicator {
-  name: string
-  value: string
-  signal: string
+interface AnalysisIndicators {
+  rsi: number
+  macd: string
+  macdValue: number
+  sma20: number
+  sma50: number
+  bollingerUpper: number
+  bollingerLower: number
+  bollingerWidth: string
+  atr: number
+  atrPercent: string
+  volumeTrend: string
 }
 
 interface Analysis {
   symbol: string
   signal: string
   confidence: number
-  summary: string
-  indicators: Indicator[]
-  levels?: Record<string, string>
-  marketContext?: Record<string, string>
+  price: number
+  change24h: number
+  high24h: number
+  low24h: number
+  analysis: string
+  indicators: AnalysisIndicators
   recommendation: string
+  timestamp: number
 }
 
 function formatPrice(price: number): string {
@@ -60,6 +73,17 @@ function formatVolume(vol: number): string {
   return `$${vol.toFixed(0)}`
 }
 
+interface CryptoNewsItem {
+  id: string
+  title: string
+  url: string
+  source: string
+  publishedAt: string
+  description: string
+  image: string | null
+  sentiment: string
+}
+
 interface MarketOverview {
   assets: Asset[]
   allAssets?: Asset[]
@@ -72,8 +96,6 @@ interface MarketOverview {
   topGainers: { name: string; change: string }[]
   topLosers: { name: string; change: string }[]
   trendingCoins?: { name: string; symbol: string }[]
-  news: { title: string; source: string; time: string; sentiment: string }[]
-  communityPosts?: { user: string; text: string; likes: number; sentiment: string }[]
   marketOverview?: {
     totalMarketCap: string
     totalVolume: string
@@ -88,16 +110,29 @@ export default function TradingPage() {
   const [overview, setOverview] = useState<MarketOverview | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<string>("BTCUSD")
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [cryptoNews, setCryptoNews] = useState<CryptoNewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
+  const [watchlist, setWatchlist] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return JSON.parse(localStorage.getItem("aiverse_watchlist") || "[]")
+      } catch { return [] }
+    }
+    return []
+  })
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/trading/market")
-        const d = await res.json()
-        const data = d?.data ?? d
-        setOverview(data)
+        const [marketRes, newsRes] = await Promise.all([
+          fetch("/api/trading/market"),
+          fetch("/api/trading/news?limit=8"),
+        ])
+        const md = await marketRes.json()
+        setOverview(md?.data ?? md)
+        const nd = await newsRes.json()
+        setCryptoNews(nd?.data?.items ?? [])
       } catch (e) {
         console.error("[TradingPage] fetchData", e)
       } finally {
@@ -106,6 +141,16 @@ export default function TradingPage() {
     }
     fetchData()
   }, [])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("aiverse_watchlist", JSON.stringify(watchlist))
+    }
+  }, [watchlist])
+
+  const toggleWatchlist = (symbol: string) => {
+    setWatchlist((prev) => prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol])
+  }
 
   const effectiveSelectedAsset = (() => {
     const list = overview?.assets ?? []
@@ -120,31 +165,9 @@ export default function TradingPage() {
       const symbol = effectiveSelectedAsset.slice(0, 3) + "/USDT"
       const res = await fetch(`/api/trading/analysis?symbol=${symbol}`)
       const json = await res.json()
-      const raw = json?.data ?? json
-      if (raw?.analysis) {
-        const a = raw.analysis
-        // Convert indicators object to array format
-        const indicatorMap: Record<string, { name: string; signal: string }> = {
-          rsi: { name: "RSI", signal: a.indicators?.rsi > 60 ? "bullish" : a.indicators?.rsi < 40 ? "bearish" : "neutral" },
-          macd: { name: "MACD", signal: typeof a.indicators?.macd === "string" && a.indicators.macd.includes("bullish") ? "bullish" : a.indicators?.macd?.includes("bearish") ? "bearish" : "neutral" },
-          movingAverage: { name: "MA", signal: typeof a.indicators?.movingAverage === "string" && a.indicators.movingAverage.includes("bullish") ? "bullish" : "bearish" },
-          bollingerBands: { name: "Bollinger", signal: a.indicators?.bollingerBands?.includes("high") ? "neutral" : "bullish" },
-          volume: { name: "Volume", signal: typeof a.indicators?.volume === "string" && a.indicators.volume.includes("increasing") ? "bullish" : "bearish" },
-        }
-        setAnalysis({
-          symbol: raw.symbol,
-          signal: a.signal,
-          confidence: a.confidence,
-          summary: a.summary,
-          indicators: Object.entries(a.indicators || {}).map(([key, val]) => ({
-            name: indicatorMap[key]?.name || key,
-            value: String(val),
-            signal: indicatorMap[key]?.signal || "neutral",
-          })),
-          levels: a.levels,
-          marketContext: a.marketContext,
-          recommendation: a.recommendation,
-        })
+      const data = json?.data ?? json
+      if (data?.indicators) {
+        setAnalysis(data)
       }
     } catch {
       setAnalysis(null)
@@ -177,8 +200,6 @@ export default function TradingPage() {
 
   const sentiment = overview?.sentiment ?? 68
   const fearGreed = overview?.fearGreed ?? 65
-  const news = overview?.news ?? []
-  const communityPosts = overview?.communityPosts ?? []
 
   return (
     <div className="min-h-screen pb-16">
@@ -291,11 +312,26 @@ export default function TradingPage() {
                             </span>
                           </div>
                         </div>
-                        {isSelected && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            Selected
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleWatchlist(asset.symbol.replace("/", "")) }}
+                            className="p-1 rounded hover:bg-accent transition-colors"
+                            aria-label={watchlist.includes(asset.symbol.replace("/", "")) ? "Remove from watchlist" : "Add to watchlist"}
+                          >
+                            <Heart
+                              className={`h-4 w-4 ${
+                                watchlist.includes(asset.symbol.replace("/", ""))
+                                  ? "fill-red-500 text-red-500"
+                                  : "text-muted-foreground hover:text-red-400"
+                              }`}
+                            />
+                          </button>
+                          {isSelected && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Selected
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -365,29 +401,55 @@ export default function TradingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Market showing strong bullish structure with BTC leading the charge.
-                  Volume profiles indicate accumulation. Key resistance at $72K.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-3"
-                  onClick={fetchAnalysis}
-                  disabled={analyzing}
-                >
-                  {analyzing ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                      Run Deep Analysis
-                    </>
-                  )}
-                </Button>
+                {analysis ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={analysis.signal === "BUY" ? "success" : analysis.signal === "SELL" ? "destructive" : "warning"}>
+                        {analysis.signal}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{analysis.confidence}% confidence</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{analysis.change24h > 0 ? "+" : ""}{analysis.change24h?.toFixed(1)}% 24h</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="rounded bg-secondary/50 p-2"><p className="text-muted-foreground">RSI</p><p className="font-semibold">{analysis.indicators.rsi}</p></div>
+                      <div className="rounded bg-secondary/50 p-2"><p className="text-muted-foreground">MACD</p><p className={`font-semibold capitalize ${analysis.indicators.macd === "bullish" ? "text-emerald-500" : "text-red-500"}`}>{analysis.indicators.macd}</p></div>
+                      <div className="rounded bg-secondary/50 p-2"><p className="text-muted-foreground">ATR</p><p className="font-semibold">{analysis.indicators.atrPercent}%</p></div>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{analysis.analysis}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={fetchAnalysis}
+                      disabled={analyzing}
+                    >
+                      {analyzing ? (
+                        <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Refresh</>
+                      ) : (
+                        <><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh Analysis</>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Click below to generate AI-powered technical analysis based on real RSI, MACD, Bollinger Bands, and volume data.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={fetchAnalysis}
+                      disabled={analyzing}
+                    >
+                      {analyzing ? (
+                        <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Analyzing...</>
+                      ) : (
+                        <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Run Deep Analysis</>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -410,37 +472,31 @@ export default function TradingPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{analysis.summary}</p>
+              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{analysis.analysis}</p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-                {analysis.indicators.map((indicator) => (
-                  <div
-                    key={indicator.name}
-                    className="rounded-lg border bg-card p-3 text-center"
-                  >
-                    <p className="text-[11px] text-muted-foreground mb-1">{indicator.name}</p>
-                    <p className="text-sm font-semibold mb-1">{indicator.value}</p>
-                    <span className={`text-[10px] font-medium ${getSignalColor(indicator.signal)}`}>
-                      {indicator.signal}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
+                {[
+                  { name: "RSI", value: String(analysis.indicators.rsi), signal: analysis.indicators.rsi > 60 ? "bullish" : analysis.indicators.rsi < 40 ? "bearish" : "neutral" },
+                  { name: "MACD", value: analysis.indicators.macd.toUpperCase(), signal: analysis.indicators.macd === "bullish" ? "bullish" : "bearish" },
+                  { name: "SMA20", value: `$${analysis.indicators.sma20.toLocaleString()}`, signal: analysis.indicators.sma20 > analysis.indicators.sma50 ? "bullish" : "bearish" },
+                  { name: "BB Width", value: `${analysis.indicators.bollingerWidth}%`, signal: Number(analysis.indicators.bollingerWidth) > 8 ? "neutral" : Number(analysis.indicators.bollingerWidth) > 4 ? "bullish" : "bullish" },
+                  { name: "ATR", value: `${analysis.indicators.atrPercent}%`, signal: Number(analysis.indicators.atrPercent) > 3 ? "neutral" : "neutral" },
+                  { name: "Volume", value: analysis.indicators.volumeTrend.toUpperCase(), signal: analysis.indicators.volumeTrend === "bullish" ? "bullish" : "bearish" },
+                ].map((ind) => (
+                  <div key={ind.name} className="rounded-lg border bg-card p-2.5 text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">{ind.name}</p>
+                    <p className="text-xs font-semibold mb-0.5">{ind.value}</p>
+                    <span className={`text-[9px] font-medium ${getSignalColor(ind.signal)}`}>
+                      {ind.signal}
                     </span>
                   </div>
                 ))}
-              </div>
-
-              <div className="rounded-lg bg-muted/50 p-4">
-                <div className="flex items-start gap-3">
-                  <DollarSign className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium mb-0.5">Recommendation</p>
-                    <p className="text-sm text-muted-foreground">{analysis.recommendation}</p>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Bottom Grid: News + Community */}
+        {/* Bottom Grid: News + Watchlist */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {/* Market News */}
           <Card>
@@ -451,61 +507,79 @@ export default function TradingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-3">
-              <div className="space-y-0 divide-y">
-                {news.map((item, i) => (
-                  <div key={i} className="py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-snug line-clamp-2">{item.title}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-xs text-muted-foreground">{item.source}</span>
-                          <span className="text-[10px] text-muted-foreground">•</span>
-                          <span className="text-xs text-muted-foreground">{item.time}</span>
+              {cryptoNews.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No news available</p>
+              ) : (
+                <div className="space-y-0 divide-y">
+                  {cryptoNews.map((item: CryptoNewsItem) => (
+                    <div key={item.id} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="group">
+                            <p className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">{item.title}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-xs text-muted-foreground">{item.source}</span>
+                              <span className="text-[10px] text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(item.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                          </a>
                         </div>
-                      </div>
-                      <Badge
-                        variant={item.sentiment === "bullish" ? "success" : item.sentiment === "bearish" ? "destructive" : "warning"}
-                        className="shrink-0 text-[10px]"
-                      >
-                        {item.sentiment}
+                        <Badge
+                          variant={item.sentiment === "bullish" ? "success" : item.sentiment === "bearish" ? "destructive" : "warning"}
+                          className="shrink-0 text-[10px]"
+                        >
+                          {item.sentiment}
                       </Badge>
                     </div>
                   </div>
                 ))}
               </div>
+            )}
             </CardContent>
           </Card>
 
-          {/* Community Sentiment */}
+          {/* Watchlist */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-primary" />
-                Community Sentiment
+                <Star className="h-4 w-4 text-primary" />
+                Watchlist
+                <span className="text-xs text-muted-foreground font-normal ml-1">({watchlist.length})</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="pb-3">
-              <div className="space-y-0 divide-y">
-                {communityPosts.map((post, i) => (
-                  <div key={i} className="py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-primary mb-0.5">{post.user}</p>
-                        <p className="text-sm leading-snug">{post.text}</p>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" /> {post.likes}</span>
+            <CardContent>
+              {watchlist.length === 0 ? (
+                <div className="text-center py-6">
+                  <Star className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">Click the <Heart className="h-3 w-3 inline" /> icon on any coin to add it to your watchlist.</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {(overview?.allAssets || overview?.assets || [])
+                    .filter((a) => watchlist.includes(a.symbol.replace("/", "")))
+                    .map((coin) => (
+                      <div key={coin.symbol} className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setSelectedAsset(coin.symbol.replace("/", ""))}>
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border bg-secondary text-[8px] font-bold overflow-hidden">
+                            <img src={coin.logo} alt="" className="h-full w-full object-contain p-0.5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{coin.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{coin.symbol}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">${coin.price.toLocaleString(undefined, {maximumFractionDigits: 2})}</p>
+                          <p className={`text-[10px] font-medium ${coin.change24h >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            {coin.change24h > 0 ? "+" : ""}{coin.change24h?.toFixed(2)}%
+                          </p>
                         </div>
                       </div>
-                      <Badge
-                        variant={post.sentiment === "bullish" ? "success" : post.sentiment === "bearish" ? "destructive" : "warning"}
-                        className="shrink-0 text-[10px]"
-                      >
-                        {post.sentiment}
-                      </Badge>
-                    </div>
-                  </div>
                 ))}
               </div>
+            )}
             </CardContent>
           </Card>
         </div>
