@@ -57,6 +57,9 @@ export const metadata: Metadata = {
   verification: {
     google: "FwFYPIxID3rhR3k1dgTuLg5lkgv2dLlWupqy3EbtNl0",
   },
+  other: {
+    "google-adsense-account": "ca-pub-2342877955221604",
+  },
   icons: {
     icon: "/icon-192.png",
     shortcut: "/icon-192.png",
