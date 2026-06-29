@@ -1,0 +1,18 @@
+name: Auto Ingestion
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    name: Run Ingestion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call ingestion API
+        run: |
+          curl -sL -X POST "https://aiverse-silk.vercel.app/api/cron/ingest" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 300
