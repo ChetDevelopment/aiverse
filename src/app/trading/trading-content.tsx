@@ -18,6 +18,7 @@ import {
   Star,
 } from "lucide-react"
 import { TradingChart } from "@/components/trading/trading-chart"
+import { PortfolioTracker } from "@/components/trading/portfolio-tracker"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -342,7 +343,7 @@ export default function TradingPage() {
         {/* Main Grid: Chart + Fear & Greed */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* Trading Chart */}
-          <TradingChart symbol={effectiveSelectedAsset} />
+          <TradingChart symbols={[effectiveSelectedAsset]} />
 
           {/* Fear & Greed + Quick Stats */}
           <div className="space-y-4">
@@ -584,8 +585,13 @@ export default function TradingPage() {
           </Card>
         </div>
 
+        {/* Portfolio Tracker */}
+        <div className="mt-8">
+          <PortfolioTracker allAssets={overview?.allAssets || overview?.assets || []} />
+        </div>
+
         {/* Bottom Stats Bar — Real data from API */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <DollarSign className="h-8 w-8 text-emerald-500/80" />
